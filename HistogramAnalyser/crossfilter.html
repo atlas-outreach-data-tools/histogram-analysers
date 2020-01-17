@@ -54,7 +54,7 @@
   <tr style="height: 50px">
     <td valign="bottom">Opening Angle Between MET and Leptons [phi]</td>
     <td valign="bottom">Opening Angle Between Leptons [phi]</td>
-    <td valign="bottom">Expected Number of Events for 1/fb</td>
+    <td valign="bottom">Expected Number of Events for 10/fb</td>
   </tr>
   <tr>
     <td><div id="hist7"></div></td>
@@ -68,7 +68,7 @@
     <script charset="utf-8" type="text/javascript" src="dc.js"></script>
     <script charset="utf-8" type="text/javascript">
 
-      d3.csv("outreach.csv", function(error, events) {
+      d3.csv("13TeVoutreach.csv", function(error, events) {
 
           events.forEach(function(x) {
              x.weight = +x.weight;
