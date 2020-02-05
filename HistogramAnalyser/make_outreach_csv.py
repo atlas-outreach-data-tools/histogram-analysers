@@ -8,7 +8,7 @@ import infofile
 
 
 lumi = 10 # 10 fb-1
-fraction = 0.1
+fraction = 1
 tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/exactly2lep/" # local
 
 
@@ -52,7 +52,7 @@ def read_sample(s):
         else:
             print("Error: "+val+" not found!")
     data_s = pd.concat(frames)
-    data_s.to_csv('13TeVoutreach_small.csv', mode='a', index=False, header=False)
+    data_s.to_csv('13TeVoutreach.csv', mode='a', index=False, header=False)
     return data_s
 
 
@@ -76,7 +76,7 @@ def get_xsec_weight(totalWeight,sample):
     info = infofile.infos[sample]
     weight = (lumi*1000*info["xsec"])/(info["sumw"]*info["red_eff"]) #*1000 to go from fb-1 to pb-1
     weight *= totalWeight
-    return weight
+    return round(weight,5)
 
 
 def mc_type(sample):
@@ -95,10 +95,10 @@ def NJets(jet_n):
     return jet_n
 
 def MET(met_et):
-    return met_et/1000
+    return round(met_et/1000,0)
 
 def calc_dPhiLL(lep_phi):
-    return abs(lep_phi[0]-lep_phi[1])
+    return round(abs(lep_phi[0]-lep_phi[1]),2)
 
 def calc_dPhiLLmet(lep_pts,lep_etas,lep_phis,met_phi):
     theta_0 = 2*math.atan(math.exp(-lep_etas[0]))
@@ -113,7 +113,7 @@ def calc_dPhiLLmet(lep_pts,lep_etas,lep_phis,met_phi):
     sumpy = py_0 + py_1
     sumpt = math.sqrt(sumpx**2 + sumpy**2)
     phi_LL = np.sign(sumpy)*math.acos(sumpx/sumpt)
-    return abs(phi_LL-met_phi)
+    return round(abs(phi_LL-met_phi),2)
 
 def calc_ptLL(lep_pts,lep_etas,lep_phis):
     theta_0 = 2*math.atan(math.exp(-lep_etas[0]))
@@ -126,7 +126,7 @@ def calc_ptLL(lep_pts,lep_etas,lep_phis):
     py_1 = p_1*math.sin(theta_1)*math.sin(lep_phis[1])
     sumpx = px_0 + px_1
     sumpy = py_0 + py_1
-    return math.sqrt(sumpx**2 + sumpy**2)/1000
+    return round(math.sqrt(sumpx**2 + sumpy**2)/1000,2)
     
 
 
@@ -143,7 +143,7 @@ def calc_mll(lep_pts,lep_etas,lep_phis):
     cosh = math.cosh(lep_etas[0]-lep_etas[1])
     cos = math.cos(lep_phis[0]-lep_phis[1])
     mll *= ( cosh - cos )
-    return math.sqrt(mll)/1000
+    return round(math.sqrt(mll)/1000,2)
 
 
 def read_file(path,sample):
@@ -169,7 +169,7 @@ def read_file(path,sample):
         data['NJets'] = data['jet_n']
 
         # MET
-        data['MET'] = data['met_et']/1000
+        data['MET'] = round(data['met_et']/1000,2)
 
         # calculation of 2-lepton invariant mass
         data['Mll'] = np.vectorize(calc_mll)(data.lep_pt,data.lep_eta,data.lep_phi)
@@ -195,6 +195,7 @@ def read_file(path,sample):
         data.drop(["lep_pt","lep_eta","lep_phi","lep_type","jet_n","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER"], axis=1, inplace=True)
 
         data = data[data.weight != 0]
+        #data['weight'] = data['weight'].apply(lambda x: '%.5f' % x)
 
         #print(data[['lep_eta']])
         #print(data)
