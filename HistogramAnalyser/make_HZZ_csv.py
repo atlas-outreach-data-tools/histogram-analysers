@@ -8,7 +8,7 @@ import infofile
 
 
 lumi = 10 # 10 fb-1
-fraction = 1
+fraction = 0.2
 tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/4lep/" # local
 
 
@@ -56,15 +56,15 @@ def read_sample(s):
         else:
             print("Error: "+val+" not found!")
     data_s = pd.concat(frames)
-    data_s.to_csv('13TeV_HZZ.csv', mode='a', index=False, header=False)
+    data_s.to_csv('13TeV_HZZ_20percent_10cols.csv', mode='a', index=False, header=False)
     return data_s
 
 
 def get_data_from_files():
 
     data = {}
-    df=pd.DataFrame(columns=["type","Channel","SumCharges","MinmOCST","LepPt0","LepPt1","LepPt2","MZ1","MZ2","Mllll","weight"])
-    df.to_csv('13TeV_HZZ.csv',index=False)
+    df=pd.DataFrame(columns=["type","Channel","SumCharges","LepPt0","LepPt1","LepPt2","MZ1","MZ2","Mllll","weight"]) #LepPt3,MinmOCST
+    df.to_csv('13TeV_HZZ_20percent_10cols.csv',index=False)
     for s in samples:
         data[s] = read_sample(s)
     
@@ -209,9 +209,11 @@ def read_file(path,sample):
     data_all = pd.DataFrame()
     mc = uproot.open(path)["mini"]
     numevents = uproot.numentries(path, "mini")
+    if 'data' in sample: fraction_MC=1
+    else: fraction_MC=fraction
     for data in mc.iterate(["lep_pt","lep_eta","lep_phi","lep_type","lep_charge",
                          "mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON", # add more variables here if you make cuts on them ,  
-                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2500000, outputtype=pd.DataFrame, entrystop=numevents*fraction):
+                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2500000, outputtype=pd.DataFrame, entrystop=numevents*fraction_MC):
 
         nIn = len(data.index)
 
@@ -234,11 +236,11 @@ def read_file(path,sample):
 
         if 'data' not in sample:
             data['weight'] = np.vectorize(calc_weight)(data.mcWeight,data.scaleFactor_PILEUP,data.scaleFactor_ELE,data.scaleFactor_MUON,data.scaleFactor_LepTRIGGER)
-            data['weight'] = np.vectorize(get_xsec_weight)(data.weight,sample)
+            data['weight'] = np.vectorize(get_xsec_weight)(data.weight,sample)/fraction
         else:
             data['weight'] = 1
 
-        data.drop(["Z1_pair","lep_pt","lep_eta","lep_phi","lep_type","lep_charge","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER"], axis=1, inplace=True)
+        data.drop(["LepPt3","MinmOCST","Z1_pair","lep_pt","lep_eta","lep_phi","lep_type","lep_charge","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER"], axis=1, inplace=True)
 
         data = data[data.weight != 0]
 
@@ -422,4 +424,4 @@ def plot_data(data):
     
     return signal_x,mc_x_tot
 
-signal_yields,background_yields = plot_data(data)
+#signal_yields,background_yields = plot_data(data)

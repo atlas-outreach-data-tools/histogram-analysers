@@ -8,15 +8,15 @@ import infofile
 
 
 lumi = 10 # 10 fb-1
-fraction = 1
+fraction = 0.1
 tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/exactly2lep/" # local
 
 
 samples = {
 
-    #'data': {
-    #    'list' : ['data_A','data_B','data_C','data_D']
-    #},
+    'data': {
+        'list' : ['data_A','data_B','data_C','data_D']
+    },
 
     'HWW' : {
         'list' : ['VBFH125_WW2lep','ggH125_WW2lep','WpH125J_qqWW2lep','ZH125J_qqWW2lep','ZH125J_vvWW2lep'],
@@ -52,7 +52,7 @@ def read_sample(s):
         else:
             print("Error: "+val+" not found!")
     data_s = pd.concat(frames)
-    data_s.to_csv('13TeVoutreach.csv', mode='a', index=False, header=False)
+    data_s.to_csv('13TeVoutreach_10percent.csv', mode='a', index=False, header=False)
     return data_s
 
 
@@ -60,7 +60,7 @@ def get_data_from_files():
 
     data = {}
     df=pd.DataFrame(columns=["type","Channel","NJets","MET","Mll","LepDeltaPhi","METLLDeltaPhi","SumLepPt","BTags","weight"])
-    df.to_csv('13TeVoutreach_small.csv',index=False)
+    df.to_csv('13TeVoutreach_10percent.csv',index=False)
     for s in samples:
         data[s] = read_sample(s)
     
@@ -76,7 +76,7 @@ def get_xsec_weight(totalWeight,sample):
     info = infofile.infos[sample]
     weight = (lumi*1000*info["xsec"])/(info["sumw"]*info["red_eff"]) #*1000 to go from fb-1 to pb-1
     weight *= totalWeight
-    return round(weight,5)
+    return round(weight,5)/fraction
 
 
 def mc_type(sample):
@@ -152,10 +152,12 @@ def read_file(path,sample):
     data_all = pd.DataFrame()
     mc = uproot.open(path)["mini"]
     numevents = uproot.numentries(path, "mini")
+    if 'data' in sample: fraction_MC=1
+    else: fraction_MC=fraction
     for data in mc.iterate(["lep_pt","lep_eta","lep_phi","lep_type",
                             "jet_n","jet_MV2c10","met_et","met_phi",
                          "mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON", # add more variables here if you make cuts on them ,  
-                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2500000, outputtype=pd.DataFrame, entrystop=numevents*fraction):
+                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2500000, outputtype=pd.DataFrame, entrystop=numevents*fraction_MC):
 
         nIn = len(data.index)
 
