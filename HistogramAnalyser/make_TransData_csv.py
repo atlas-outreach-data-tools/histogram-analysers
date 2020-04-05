@@ -9,7 +9,9 @@ import infofile
 
 lumi = 10 # 10 fb-1
 fraction = 1
-tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/exactly2lep/" # local
+MC_to_data_ratio = 1
+tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/2lep/" # local
+#tuple_path = "https://atlas-opendata.web.cern.ch/atlas-opendata/samples/2020/2lep/" # web
 
 
 samples = {
@@ -19,19 +21,23 @@ samples = {
     },
 
     'HWW' : {
-        'list' : ['VBFH125_WW2lep','ggH125_WW2lep','WpH125J_qqWW2lep','ZH125J_qqWW2lep','ZH125J_vvWW2lep'],
+        'list' : ['VBFH125_WW2lep','ggH125_WW2lep'],
+        'color' : "#0074bf"
     },
 
     'WW' : {
-        'list' : ['WpqqWmlv','WplvWmqq','llvv'],
+        'list' : ['llvv'],
+        'color' : "#ff7400"
     },
 
     'ttbar' : {
         'list' : ['ttbar_lep'],
+        'color' : "#00ab00"
     },
 
     'Z' : {
         'list' : ['Zee','Zmumu','Ztautau'],
+        'color' : "#ed0000"
     }
 
 }
@@ -45,40 +51,149 @@ def read_sample(s):
         if s == 'data':
             prefix = "Data/"
         else: prefix += str(infofile.infos[val]["DSID"])+"."
-        fileString = tuple_path+prefix+val+".exactly2lep.root" 
+        fileString = tuple_path+prefix+val+".2lep.root" 
         if fileString != "":
             temp = read_file(fileString,val)
             frames.append(temp)
         else:
             print("Error: "+val+" not found!")
     data_s = pd.concat(frames)
-    data_s.to_csv('13TeVTransData.csv', mode='a', index=False, header=False)
+    data_s.to_csv('13TeV_TransData.csv', mode='a', index=False, header=False)
     return data_s
 
 
 def get_data_from_files():
-
     data = {}
-    df=pd.DataFrame(columns=["type","Channel","NJets","MET","Mll","TransverseMass","TransMass","LepDeltaPhi","METLLDeltaPhi","SumLepPt","BTags","weight"])
-    df.to_csv('13TeVTransData.csv',index=False)
+    df=pd.DataFrame(columns=["type","NJets","MET","Mll","LepDeltaPhi","METLLDeltaPhi","SumLepPt","TransMass","BTags","weight"])
+    df.to_csv('13TeV_TransData.csv',index=False)
     for s in samples:
         data[s] = read_sample(s)
-    
     return data
 
-
+# multiply event weights and scale factors
 def calc_weight(mcWeight,scaleFactor_PILEUP,scaleFactor_ELE,
                 scaleFactor_MUON, scaleFactor_LepTRIGGER):
     return mcWeight*scaleFactor_PILEUP*scaleFactor_ELE*scaleFactor_MUON*scaleFactor_LepTRIGGER
 
 
+# multiply totalWeight by cross-section weight
 def get_xsec_weight(totalWeight,sample):
     info = infofile.infos[sample]
     weight = (lumi*1000*info["xsec"])/(info["sumw"]*info["red_eff"]) #*1000 to go from fb-1 to pb-1
     weight *= totalWeight
-    return round(weight,5)
+    return round(weight/MC_to_data_ratio,5)
+
+def find_good_lep_0_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,lep_isTightID,lep_z0,lep_d0,lep_sigd0):
+    for i in range(lep_n):
+        #if abs(lep_eta[i])<2.5 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+        if abs(lep_eta[i])<0.75 and lep_ptcone[i]/lep_pt[i]<0.065 and lep_etcone[i]/lep_pt[i]<0.065 and abs(lep_d0[i])/lep_sigd0[i]<3 and lep_isTightID[i]:
+            #if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
+            theta_i = 2*math.atan(math.exp(-lep_eta[i]))
+            if abs(lep_z0[i]*math.sin(theta_i))<0.5:
+                return i
+    return -1
+
+def find_good_lep_1_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,lep_isTightID,lep_z0,lep_d0,lep_sigd0,
+                          good_lep_0_index):
+    if good_lep_0_index!=-1:
+        for i in range(good_lep_0_index+1,lep_n):
+            #if abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+            if abs(lep_eta[i])<2.47 and (abs(lep_eta[i])<1.37 or abs(lep_eta[i])>1.52) and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<3 and lep_isTightID[i]:
+                #if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
+                theta_i = 2*math.atan(math.exp(-lep_eta[i]))
+                if abs(lep_z0[i]*math.sin(theta_i))<0.5:
+                    return i
+    return -1
+
+def find_lep_2_index(lep_n,good_lep_1_index):
+    if good_lep_1_index!=-1:
+        for i in range(good_lep_1_index+1,lep_n):
+            return i
+    return -1
+
+def find_good_jet_0_index(jet_n,jet_pt,jet_eta,jet_jvt):
+    for i in range(jet_n):
+        if jet_pt[i]>25000:
+            if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                if jet_jvt[i]<0.59: continue
+            return i
+    return -1
+
+def find_good_jet_1_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_0_index):
+    if good_jet_0_index!=-1:
+        for i in range(good_jet_0_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_2_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_1_index):
+    if good_jet_1_index!=-1:
+        for i in range(good_jet_1_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_3_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_2_index):
+    if good_jet_2_index!=-1:
+        for i in range(good_jet_2_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_4_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_3_index):
+    if good_jet_3_index!=-1:
+        for i in range(good_jet_3_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_5_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_4_index):
+    if good_jet_4_index!=-1:
+        for i in range(good_jet_4_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_6_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_5_index):
+    if good_jet_5_index!=-1:
+        for i in range(good_jet_5_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_7_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_6_index):
+    if good_jet_6_index!=-1:
+        for i in range(good_jet_6_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
+
+def find_good_jet_8_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_7_index):
+    if good_jet_7_index!=-1:
+        for i in range(good_jet_7_index+1,jet_n):
+            if jet_pt[i]>25000:
+                if jet_pt[i]<60000 and abs(jet_eta[i])<2.4:
+                    if jet_jvt[i]<0.59: continue
+                return i
+    return -1
 
 
+
+# return number to represent which process
 def mc_type(sample):
     if sample in samples['HWW']['list']: return 0
     elif sample in samples['WW']['list']: return 1
@@ -86,66 +201,109 @@ def mc_type(sample):
     elif sample in samples['Z']['list']: return 3
     else: return 4 # data
 
-def channel_cut(lep_type):
-    return lep_type[0]*lep_type[1]!=143
+# return number to represent which channel
+def channel(lep_type,good_lep_0_index,good_lep_1_index):
+    if lep_type[good_lep_0_index]*lep_type[good_lep_1_index]==121: return 0 #ee
+    elif lep_type[good_lep_0_index]*lep_type[good_lep_1_index]==169: return 1 #mm
+    else: return 2 #em 
 
-def channel(lep_type):
-    if lep_type[0]*lep_type[1]==121: return 0 #ee
-    elif lep_type[0]*lep_type[1]==169: return 1 #mm
-    else: return 2 #em
+# calculate invariant mass of dilepton pair
+def calc_mll(lep_pt,lep_eta,lep_phi,lep_E,good_lep_0_index,good_lep_1_index):
+    px_0 = lep_pt[good_lep_0_index]*math.cos(lep_phi[good_lep_0_index])
+    py_0 = lep_pt[good_lep_0_index]*math.sin(lep_phi[good_lep_0_index])
+    pz_0 = lep_pt[good_lep_0_index]*math.sinh(lep_eta[good_lep_0_index])
+    px_1 = lep_pt[good_lep_1_index]*math.cos(lep_phi[good_lep_1_index])
+    py_1 = lep_pt[good_lep_1_index]*math.sin(lep_phi[good_lep_1_index])
+    pz_1 = lep_pt[good_lep_1_index]*math.sinh(lep_eta[good_lep_1_index])
+    sumpx = px_0 + px_1
+    sumpy = py_0 + py_1
+    sumpz = pz_0 + pz_1
+    sump = math.sqrt(sumpx**2 + sumpy**2 + sumpz**2)
+    sumE = lep_E[good_lep_0_index] + lep_E[good_lep_1_index]
+    return round(math.sqrt(sumE**2 - sump**2)/1000,2) #/1000 to go from MeV to GeV
 
-def NJets(jet_n):
-    return jet_n
+# calculate azimuthal angle difference between the 2 leptons
+def calc_dPhiLL(lep_phi,good_lep_0_index,good_lep_1_index):
+    return round(abs(lep_phi[good_lep_0_index]-lep_phi[good_lep_1_index]),2)
 
-def calc_dPhiLL(lep_phi):
-    return round(abs(lep_phi[0]-lep_phi[1]),2)
-
-def calc_dPhiLLmet(lep_pts,lep_etas,lep_phis,met_phi):
-    theta_0 = 2*math.atan(math.exp(-lep_etas[0]))
-    theta_1 = 2*math.atan(math.exp(-lep_etas[1]))
-    p_0 = lep_pts[0]/math.sin(theta_0)
-    p_1 = lep_pts[1]/math.sin(theta_1)
-    px_0 = p_0*math.sin(theta_0)*math.cos(lep_phis[0])
-    px_1 = p_1*math.sin(theta_1)*math.cos(lep_phis[1])
-    py_0 = p_0*math.sin(theta_0)*math.sin(lep_phis[0])
-    py_1 = p_1*math.sin(theta_1)*math.sin(lep_phis[1])
+# calculate azimuthal angle difference between the MET and the vector sum of the 2 leptons
+def calc_dPhiLLmet(lep_pt,lep_phi,met_phi,good_lep_0_index,good_lep_1_index):
+    px_0 = lep_pt[good_lep_0_index]*math.cos(lep_phi[good_lep_0_index])
+    py_0 = lep_pt[good_lep_0_index]*math.sin(lep_phi[good_lep_0_index])
+    px_1 = lep_pt[good_lep_1_index]*math.cos(lep_phi[good_lep_1_index])
+    py_1 = lep_pt[good_lep_1_index]*math.sin(lep_phi[good_lep_1_index])
     sumpx = px_0 + px_1
     sumpy = py_0 + py_1
     sumpt = math.sqrt(sumpx**2 + sumpy**2)
     phi_LL = np.sign(sumpy)*math.acos(sumpx/sumpt)
-    return round(abs(phi_LL-met_phi),2)
+    return round(abs(phi_LL - met_phi),2)
 
-def calc_ptLL(lep_pts,lep_etas,lep_phis):
-    theta_0 = 2*math.atan(math.exp(-lep_etas[0]))
-    theta_1 = 2*math.atan(math.exp(-lep_etas[1]))
-    p_0 = lep_pts[0]/math.sin(theta_0)
-    p_1 = lep_pts[1]/math.sin(theta_1)
-    px_0 = p_0*math.sin(theta_0)*math.cos(lep_phis[0])
-    px_1 = p_1*math.sin(theta_1)*math.cos(lep_phis[1])
-    py_0 = p_0*math.sin(theta_0)*math.sin(lep_phis[0])
-    py_1 = p_1*math.sin(theta_1)*math.sin(lep_phis[1])
+# calculate the pt of the vector sum of the 2 leptons
+def calc_ptLL(lep_pt,lep_phi,good_lep_0_index,good_lep_1_index):
+    px_0 = lep_pt[good_lep_0_index]*math.cos(lep_phi[good_lep_0_index])
+    py_0 = lep_pt[good_lep_0_index]*math.sin(lep_phi[good_lep_0_index])
+    px_1 = lep_pt[good_lep_1_index]*math.cos(lep_phi[good_lep_1_index])
+    py_1 = lep_pt[good_lep_1_index]*math.sin(lep_phi[good_lep_1_index])
     sumpx = px_0 + px_1
     sumpy = py_0 + py_1
-    return round(math.sqrt(sumpx**2 + sumpy**2)/1000,2)
+    return round(math.sqrt(sumpx**2 + sumpy**2)/1000,2) #/1000 to go from MeV to GeV 
     
+# calculate transverse mass
 def calc_mT(ptLL,met_et,dPhiLLmet):
-    return round(math.sqrt(2*ptLL*met_et*(1-math.cos(dPhiLLmet)))/1000,2)
+    return round(math.sqrt(2*ptLL*(met_et/1000)*(1-math.cos(dPhiLLmet))),2)
 
-def bjet_n(jet_n,jet_MV2c10):
-    bjet_n = 0
-    for i in range(jet_n):
-        if jet_MV2c10[i]>0.1758475: 
-            bjet_n+=1
-    return bjet_n
+# determine whether any jets are bjets
+def bjets(jet_MV2c10,
+              good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,
+                      good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index):
+    bjets = 0
+    all_jets_indices = [good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index]
+    good_jets_indices = [jet_i for jet_i in all_jets_indices if jet_i!=-1]
+    for i in good_jets_indices:
+        if jet_MV2c10[i]>0.1758475:
+            bjets = 1
+    return bjets
 
 
-def calc_mll(lep_pts,lep_etas,lep_phis):
-    mll = 2*lep_pts[0]*lep_pts[1]
-    cosh = math.cosh(lep_etas[0]-lep_etas[1])
-    cos = math.cos(lep_phis[0]-lep_phis[1])
-    mll *= ( cosh - cos )
-    return round(math.sqrt(mll)/1000,2)
+# throw away events that don't have 2 leptons
+def cut_good_lep_n(good_lep_1_index,lep_2_index):
+    # return when number of good leptons is not equal to 2                                                               
+    # good_lep_index_1==-1 means there's no 2nd good lepton                                                              
+    # lep_index_2!=-1 means there's a 3rd lepton                                                                         
+    return good_lep_1_index==-1 or lep_2_index!=-1
 
+# throw away events that don't have opposite-charge leptons
+def cut_lep_charge(lep_charge,good_lep_0_index,good_lep_1_index):
+    # return when sum of lepton charges is not equal to 0                                                                
+    # first lepton is [0], 2nd lepton is [1]                                                                             
+    return lep_charge[good_lep_0_index] + lep_charge[good_lep_1_index] != 0
+
+# throw away events where either 2nd lepton has pt < 15 GeV
+def cut_lep_pt(lep_pt,good_lep_0_index,good_lep_1_index):
+    return lep_pt[good_lep_0_index]<35000 or lep_pt[good_lep_1_index] < 35000
+
+
+def calc_good_jet_n(good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,
+                      good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index):
+    all_jets_indices = [good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index]
+    good_jets_indices = [jet_i for jet_i in all_jets_indices if jet_i!=-1]
+    return len(good_jets_indices)
+
+# throw away events where Transverse Mass is < 50 GeV
+def mT_cut(TransMass):
+    return TransMass < 50
+
+# throw away events where Mll < 10 GeV
+def Mll_cut_lower(Mll):
+    return Mll<10
+
+# throw away events where weight is 0
+def cut_weight(weight):
+    return weight==0
+
+# throw away events which aren't emu channel
+def channel_cut(lep_type,good_lep_0_index,good_lep_1_index):
+    return lep_type[good_lep_0_index]*lep_type[good_lep_1_index]!=143
 
 def read_file(path,sample):
     start = time.time()
@@ -153,49 +311,110 @@ def read_file(path,sample):
     data_all = pd.DataFrame()
     mc = uproot.open(path)["mini"]
     numevents = uproot.numentries(path, "mini")
-    for data in mc.iterate(["lep_pt","lep_eta","lep_phi","lep_type",
-                            "jet_n","jet_MV2c10","met_et","met_phi",
-                         "mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON", # add more variables here if you make cuts on them ,  
-                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2500000, outputtype=pd.DataFrame, entrystop=numevents*fraction):
+    if 'data' in sample: fraction_MC=fraction
+    else: fraction_MC=fraction*MC_to_data_ratio
+    entrystart=0
+    if 'Zee' in sample: entrystart=7282842
+    for data in mc.iterate(["lep_n","lep_pt","lep_eta","lep_phi","lep_E","lep_charge","lep_type",
+                            "lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased",
+                            "jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi",
+                         "mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON", # add more variables here if you make cuts on them ,              
+                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=5462131, outputtype=pd.DataFrame, entrystart=entrystart, entrystop=numevents*fraction_MC):
 
         nIn = len(data.index)
+
+        data['good_lep_0_index'] = np.vectorize(find_good_lep_0_index)(data.lep_n,data.lep_type,data.lep_pt,data.lep_eta,
+                                                                       data.lep_ptcone30,data.lep_etcone20,data.lep_isTightID,
+                                                                       data.lep_z0,data.lep_trackd0pvunbiased,data.lep_tracksigd0pvunbiased)
+        data['good_lep_1_index'] = np.vectorize(find_good_lep_1_index)(data.lep_n,data.lep_type,data.lep_pt,data.lep_eta,
+                                                                       data.lep_ptcone30,data.lep_etcone20,data.lep_isTightID,
+                                                                       data.lep_z0,data.lep_trackd0pvunbiased,data.lep_tracksigd0pvunbiased,data.good_lep_0_index)
+        data['lep_2_index'] = np.vectorize(find_lep_2_index)(data.lep_n,data.good_lep_1_index)
+        data['good_jet_0_index'] = np.vectorize(find_good_jet_0_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt)
+        data['good_jet_1_index'] = np.vectorize(find_good_jet_1_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_0_index)
+        data['good_jet_2_index'] = np.vectorize(find_good_jet_2_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_1_index)
+        data['good_jet_3_index'] = np.vectorize(find_good_jet_3_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_2_index)
+        data['good_jet_4_index'] = np.vectorize(find_good_jet_4_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_3_index)
+        data['good_jet_5_index'] = np.vectorize(find_good_jet_5_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_4_index)
+        data['good_jet_6_index'] = np.vectorize(find_good_jet_6_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_5_index)
+        data['good_jet_7_index'] = np.vectorize(find_good_jet_7_index)(data.jet_n,data.jet_pt,
+                                                                       data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_6_index)
+        data['good_jet_8_index'] = np.vectorize(find_good_jet_8_index)(data.jet_n,data.jet_pt,data.jet_eta,data.jet_jvt,
+                                                                      data.good_jet_7_index)
+
+        # throw away events where number of leptons isn't 2
+        fail = data[ np.vectorize(cut_good_lep_n)(data.good_lep_1_index,data.lep_2_index) ].index
+        data.drop(fail, inplace=True)
+
+        # throw away events where leptons aren't oppositely charged
+        fail = data[ np.vectorize(cut_lep_charge)(data.lep_charge,data.good_lep_0_index,data.good_lep_1_index) ].index
+        data.drop(fail, inplace=True)
+
+        # cut on channel
+        fail = data[ np.vectorize(channel_cut)(data.lep_type,data.good_lep_0_index,data.good_lep_1_index) ].index
+        data.drop(fail, inplace=True)
+
+        # throw away events where 2nd lepton has pt < 15 GeV
+        fail = data[ np.vectorize(cut_lep_pt)(data.lep_pt,data.good_lep_0_index,data.good_lep_1_index) ].index
+        data.drop(fail, inplace=True)
+
 
         # label for each mc type
         data['type'] = np.vectorize(mc_type)(sample)
 
-        # cut on lepton type
-        fail = data[ np.vectorize(channel_cut)(data.lep_type) ].index
-        data.drop(fail, inplace=True)
-
-        # label for channel (ee, mm or em)                                                                            
-        data['Channel'] = np.vectorize(channel)(data.lep_type)
+        # label for channel (ee, mm or em)
+        data['Channel'] = np.vectorize(channel)(data.lep_type,data.good_lep_0_index,data.good_lep_1_index)
 
         # number of jets
-        data['NJets'] = data['jet_n']
+        data['NJets'] = np.vectorize(calc_good_jet_n)(data.good_jet_0_index,data.good_jet_1_index,data.good_jet_2_index,
+                                          data.good_jet_3_index,data.good_jet_4_index,data.good_jet_5_index,
+                                          data.good_jet_6_index,data.good_jet_7_index,data.good_jet_8_index)
 
         # MET
         data['MET'] = round(data['met_et']/1000,2)
 
         # calculation of 2-lepton invariant mass
-        data['Mll'] = np.vectorize(calc_mll)(data.lep_pt,data.lep_eta,data.lep_phi)
+        data['Mll'] = np.vectorize(calc_mll)(data.lep_pt,data.lep_eta,data.lep_phi,data.lep_E,data.good_lep_0_index,
+                                            data.good_lep_1_index)
+        fail = data[ np.vectorize(Mll_cut_lower)(data.Mll) ].index
+        data.drop(fail, inplace=True)
 
         # Angular separation between leptons
-        data['LepDeltaPhi'] = np.vectorize(calc_dPhiLL)(data.lep_phi)
+        data['LepDeltaPhi'] = np.vectorize(calc_dPhiLL)(data.lep_phi,data.good_lep_0_index,data.good_lep_1_index)
 
         # Angular separation between leptons and MET dPhi(MET,ll)
-        data['METLLDeltaPhi'] = np.vectorize(calc_dPhiLLmet)(data.lep_pt,data.lep_eta,data.lep_phi,data.met_phi)
+        data['METLLDeltaPhi'] = np.vectorize(calc_dPhiLLmet)(data.lep_pt,data.lep_phi,data.met_phi,data.good_lep_0_index,data.good_lep_1_index)
 
         # Sum of lepton pt
-        data['SumLepPt'] = np.vectorize(calc_ptLL)(data.lep_pt,data.lep_eta,data.lep_phi)
+        data['SumLepPt'] = np.vectorize(calc_ptLL)(data.lep_pt,data.lep_phi,data.good_lep_0_index,
+                                             data.good_lep_1_index        )
 
         # transverse mass
         data['TransMass'] = np.vectorize(calc_mT)(data.SumLepPt,data.met_et,data.METLLDeltaPhi)
 
-        # transverse mass
-        data['TransverseMass'] = np.vectorize(calc_mT)(data.SumLepPt,data.met_et,data.METLLDeltaPhi)
+        # cut out transverse mass below 50 GeV
+        fail = data[ np.vectorize(mT_cut)(data.TransMass) ].index
+        data.drop(fail, inplace=True)
 
-        # calculation of bjet_n
-        data['BTags'] = np.vectorize(bjet_n)(data.jet_n,data.jet_MV2c10)
+        # whether at least 1 jet is btagged
+        data['BTags'] = np.vectorize(bjets)(data.jet_MV2c10,
+                                        data.good_jet_0_index,data.good_jet_1_index,data.good_jet_2_index,
+                                          data.good_jet_3_index,data.good_jet_4_index,data.good_jet_5_index,
+                                          data.good_jet_6_index,data.good_jet_7_index,data.good_jet_8_index        )
 
         if 'data' not in sample:
             data['weight'] = np.vectorize(calc_weight)(data.mcWeight,data.scaleFactor_PILEUP,data.scaleFactor_ELE,data.scaleFactor_MUON,data.scaleFactor_LepTRIGGER)
@@ -203,13 +422,14 @@ def read_file(path,sample):
         else:
             data['weight'] = 1
 
-        data.drop(["lep_pt","lep_eta","lep_phi","lep_type","jet_n","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER"], axis=1, inplace=True)
+        data.drop(["lep_n","lep_pt","lep_eta","lep_phi","lep_E","lep_charge","lep_type","lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased","jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER","good_lep_0_index","good_lep_1_index","lep_2_index","good_jet_0_index","good_jet_1_index","good_jet_2_index","good_jet_3_index","good_jet_4_index","good_jet_5_index","good_jet_6_index","good_jet_7_index","good_jet_8_index"], axis=1, inplace=True)
 
-        data = data[data.weight != 0]
-        #data['weight'] = data['weight'].apply(lambda x: '%.5f' % x)
+        # throw away events with weight 0
+        fail = data[ np.vectorize(cut_weight)(data.weight) ].index
+        data.drop(fail, inplace=True)
 
         #print(data[['lep_eta']])
-        #print(data)
+        if 'Zee' in sample: print(data['Mll'])
 
         nOut = len(data.index)
         data_all = data_all.append(data)
@@ -223,3 +443,169 @@ start = time.time()
 data = get_data_from_files()
 elapsed = time.time() - start
 print("Time taken: "+str(elapsed))
+
+import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator,LogLocator,LogFormatterSciNotation # for minor ticks
+import HWWHistograms
+import labelfile
+stack_order = ['WW','ttbar','Z']
+
+def plot_data(data):
+
+    signal_format = 'hist' # 'line' for line above SM stack
+                           # 'hist' for bar above SM stack
+                           # None for signal as part of SM stack
+    Total_SM_label = False # for Total SM black line in plot and legend
+    plot_label = r'$H \rightarrow WW \rightarrow e\nu\mu\nu$'
+    signal_label = r'Signal ($m_H=125$ GeV)' # r''
+
+    # *******************
+    # general definitions (shouldn't need to change)
+    lumi_used = str(lumi*fraction)    
+    signal = None
+    for s in samples.keys():
+        if s not in stack_order and s!='data': signal = s
+
+    for x_variable,hist in HWWHistograms.hist_dict.items():
+
+        h_bin_width = hist['bin_width']
+        h_num_bins = hist['num_bins']
+        h_xrange_min = hist['xrange_min']
+        h_log_y = hist['log_y']
+        h_y_label_x_position = hist['y_label_x_position']
+        h_legend_loc = hist['legend_loc']
+        h_log_top_margin = hist['log_top_margin'] # to decrease the separation between data and the top of the figure, remove a 0
+        h_linear_top_margin = hist['linear_top_margin'] # to decrease the separation between data and the top of the figure, pick a number closer to 1
+    
+        bins = [h_xrange_min + x*h_bin_width for x in range(h_num_bins+1) ]
+        bin_centres = [h_xrange_min+h_bin_width/2 + x*h_bin_width for x in range(h_num_bins) ]
+
+        data_x,_ = np.histogram(data['data'][x_variable].values, bins=bins)
+        data_x_errors = np.sqrt(data_x)
+
+        signal_x = None
+        if signal_format=='line':
+            signal_x,_ = np.histogram(data[signal][x_variable].values,bins=bins,weights=data[signal].weight.values)
+        elif signal_format=='hist':
+            signal_x = data[signal][x_variable].values
+            signal_weights = data[signal].weight.values
+            signal_color = samples[signal]['color']
+    
+        mc_x = []
+        mc_weights = []
+        mc_colors = []
+        mc_labels = []
+        mc_x_tot = np.zeros(len(bin_centres))
+
+        for s in stack_order:
+            mc_labels.append(s)
+            mc_x.append(data[s][x_variable].values)
+            mc_colors.append(samples[s]['color'])
+            mc_weights.append(data[s].weight.values)
+            mc_x_heights,_ = np.histogram(data[s][x_variable].values,bins=bins,weights=data[s].weight.values)
+            mc_x_tot = np.add(mc_x_tot, mc_x_heights)
+    
+        mc_x_err = np.sqrt(mc_x_tot)
+    
+    
+        # *************
+        # Main plot 
+        # *************
+        plt.clf()
+        plt.axes([0.1,0.3,0.85,0.65]) #(left, bottom, width, height)
+        main_axes = plt.gca()
+        main_axes.errorbar( x=bin_centres, y=data_x, yerr=data_x_errors, fmt='ko', label='Data')
+        mc_heights = main_axes.hist(mc_x,bins=bins,weights=mc_weights,stacked=True,color=mc_colors, label=mc_labels)
+        if Total_SM_label:
+            totalSM_handle, = main_axes.step(bins,np.insert(mc_x_tot,0,mc_x_tot[0]),color='black')
+        if signal_format=='line':
+            main_axes.step(bins,np.insert(signal_x,0,signal_x[0]),color=samples[signal]['color'], linestyle='--',
+                       label=signal)
+        elif signal_format=='hist':
+            main_axes.hist(signal_x,bins=bins,bottom=mc_x_tot,weights=signal_weights,color=signal_color,label=signal)
+        main_axes.bar(bin_centres,2*mc_x_err,bottom=mc_x_tot-mc_x_err,alpha=0.5,color='none',hatch="////",
+                  width=h_bin_width, label='Stat. Unc.')
+        
+        main_axes.set_xlim(left=h_xrange_min,right=bins[-1])
+        main_axes.xaxis.set_minor_locator(AutoMinorLocator()) # separation of x axis minor ticks
+        main_axes.tick_params(which='both',direction='in',top=True,labeltop=False,labelbottom=False,right=True,labelright=False)
+        main_axes.set_ylabel(r'Events / '+str(h_bin_width)+r' GeV',fontname='sans-serif',horizontalalignment='right',y=1.0,fontsize=11)
+        if h_log_y:
+            main_axes.set_yscale('log')
+            smallest_contribution = mc_heights[0][0]
+            smallest_contribution.sort()
+            bottom = smallest_contribution[-2]
+            top = np.amax(data_x)*h_log_top_margin
+            main_axes.set_ylim(bottom=bottom,top=top)
+            main_axes.yaxis.set_major_formatter(CustomTicker())
+            locmin = LogLocator(base=10.0,subs=(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),numticks=12)
+            main_axes.yaxis.set_minor_locator(locmin)
+        else: 
+            main_axes.set_ylim(bottom=0,top=(np.amax(data_x)+math.sqrt(np.amax(data_x)))*h_linear_top_margin)
+            main_axes.yaxis.set_minor_locator(AutoMinorLocator())
+        
+        plt.text(0.05,0.97,'ATLAS',ha="left",va="top",family='sans-serif',transform=main_axes.transAxes,style='italic',weight='bold',fontsize=13)
+        plt.text(0.19,0.97,'Open Data',ha="left",va="top",family='sans-serif',transform=main_axes.transAxes,fontsize=13)
+        plt.text(0.05,0.9,'for education only',ha="left",va="top",family='sans-serif',transform=main_axes.transAxes,style='italic',fontsize=8)
+        plt.text(0.05,0.86,r'$\sqrt{s}=13\,\mathrm{TeV},\;\int L\,dt=$'+lumi_used+'$\,\mathrm{fb}^{-1}$',ha="left",va="top",family='sans-serif',transform=main_axes.transAxes)
+        plt.text(0.05,0.78,plot_label,ha="left",va="top",family='sans-serif',transform=main_axes.transAxes)
+    
+        # Create new legend handles but use the colors from the existing ones 
+        handles, labels = main_axes.get_legend_handles_labels()
+        if signal_format=='line':
+            handles[labels.index(signal)] = Line2D([], [], c=samples[signal]['color'], linestyle='dashed')
+        if Total_SM_label:
+            uncertainty_handle = mpatches.Patch(facecolor='none',hatch='////')
+            handles.append((totalSM_handle,uncertainty_handle))
+            labels.append('Total SM')
+    
+        # specify order within legend
+        new_handles = [handles[labels.index('Data')]]
+        new_labels = ['Data']
+        for s in reversed(stack_order):
+            new_handles.append(handles[labels.index(s)])
+            new_labels.append(s)
+        if Total_SM_label:
+            new_handles.append(handles[labels.index('Total SM')])
+            new_labels.append('Total SM')
+        else: 
+            new_handles.append(handles[labels.index('Stat. Unc.')])
+            new_labels.append('Stat. Unc.')
+        if signal is not None:
+            new_handles.append(handles[labels.index(signal)])
+            new_labels.append(signal_label)
+        main_axes.legend(handles=new_handles, labels=new_labels, frameon=False, loc=h_legend_loc)
+    
+    
+        # *************
+        # Data/MC ratio 
+        # *************
+        plt.axes([0.1,0.1,0.85,0.2]) #(left, bottom, width, height)
+        ratio_axes = plt.gca()
+        ratio_axes.errorbar( x=bin_centres, y=data_x/mc_x_tot, yerr=data_x_errors/mc_x_tot, fmt='ko')
+        ratio_axes.bar(bin_centres,2*mc_x_err/mc_x_tot,bottom=1-mc_x_err/mc_x_tot,alpha=0.5,color='none',
+            hatch="////",width=h_bin_width)
+        ratio_axes.plot(bins,np.ones(len(bins)),color='k')
+        ratio_axes.set_xlim(left=h_xrange_min,right=bins[-1])
+        ratio_axes.xaxis.set_minor_locator(AutoMinorLocator()) # separation of x axis minor ticks
+        ratio_axes.xaxis.set_label_coords(0.9,-0.2) # (x,y) of x axis label # 0.2 down from x axis
+        ratio_axes.set_xlabel(labelfile.variable_labels[x_variable],fontname='sans-serif',fontsize=11)
+        ratio_axes.tick_params(which='both',direction='in',top=True,labeltop=False,right=True,labelright=False)
+        ratio_axes.set_ylim(bottom=0,top=2.5)
+        ratio_axes.set_yticks([0,1,2])
+        ratio_axes.yaxis.set_minor_locator(AutoMinorLocator())
+        if signal is not None:
+            ratio_axes.set_ylabel(r'Data/SM',fontname='sans-serif',x=1,fontsize=11)
+        else:
+            ratio_axes.set_ylabel(r'Data/MC',fontname='sans-serif',fontsize=11)
+        
+        
+        # Generic features for both plots
+        main_axes.yaxis.set_label_coords(h_y_label_x_position,1)
+        ratio_axes.yaxis.set_label_coords(h_y_label_x_position,0.5)
+    
+        plt.savefig("HWW_"+x_variable+".pdf")
+    
+    return signal_x,mc_x_tot
+
+signal_yields,background_yields = plot_data(data)
