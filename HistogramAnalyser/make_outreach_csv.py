@@ -7,9 +7,9 @@ import numpy as np
 import infofile
 
 
-lumi = 10 # 10 fb-1
+lumi = 10.0643 # 10 fb-1
 fraction = 1
-MC_to_data_ratio = 1
+MC_to_data_ratio = 0.003
 tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/2lep/" # local
 #tuple_path = "https://atlas-opendata.web.cern.ch/atlas-opendata/samples/2020/2lep/" # web
 
@@ -21,12 +21,12 @@ samples = {
     #},
 
     'HWW' : {
-        'list' : ['VBFH125_WW2lep','ggH125_WW2lep'],
+        'list' : ['VBFH125_WW2lep','ggH125_WW2lep'],#,'WpH125J_qqWW2lep','WpH125J_lvWW2lep','ZH125J_qqWW2lep','ZH125J_llWW2lep','ZH125J_vvWW2lep'],
         'color' : "#0074bf"
     },
 
     'WW' : {
-        'list' : ['llvv'],
+        'list' : ['llvv'],#,'WpqqWmlv','WplvWmqq'],
         'color' : "#ff7400"
     },
 
@@ -39,6 +39,11 @@ samples = {
         'list' : ['Zee','Zmumu','Ztautau'],
         'color' : "#ed0000"
     }
+
+    #'Wt' : {
+    #    'list' : ['single_top_wtchan','single_antitop_wtchan'],#,'single_top_tchan','single_antitop_tchan','single_top_schan','single_antitop_schan'],
+    #    'color' : "#00c7f7"
+    #}
 
 }
 
@@ -54,10 +59,12 @@ def read_sample(s):
         fileString = tuple_path+prefix+val+".2lep.root" 
         if fileString != "":
             temp = read_file(fileString,val)
+            print('\t\tsum of weights',sum(temp['weight']))
             frames.append(temp)
         else:
             print("Error: "+val+" not found!")
     data_s = pd.concat(frames)
+    data_s['LepDeltaPhi'] = data_s['LepDeltaPhi'].round(2)
     data_s.to_csv('13TeV_outreach.csv', mode='a', index=False, header=False)
     return data_s
 
@@ -85,9 +92,8 @@ def get_xsec_weight(totalWeight,sample):
 
 def find_good_lep_0_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,lep_isTightID,lep_z0,lep_d0,lep_sigd0):
     for i in range(lep_n):
-        #if abs(lep_eta[i])<2.5 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
-        if abs(lep_eta[i])<1.37 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<3 and lep_isTightID[i]:
-            #if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
+        if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+            if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
             theta_i = 2*math.atan(math.exp(-lep_eta[i]))
             if abs(lep_z0[i]*math.sin(theta_i))<0.5:
                 return i
@@ -97,18 +103,22 @@ def find_good_lep_1_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,le
                           good_lep_0_index):
     if good_lep_0_index!=-1:
         for i in range(good_lep_0_index+1,lep_n):
-            #if abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
-            if abs(lep_eta[i])<2.47 and (abs(lep_eta[i])<1.37 or abs(lep_eta[i])>1.52) and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<3 and lep_isTightID[i]:
-                #if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
+            if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+                if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
                 theta_i = 2*math.atan(math.exp(-lep_eta[i]))
                 if abs(lep_z0[i]*math.sin(theta_i))<0.5:
                     return i
     return -1
 
-def find_lep_2_index(lep_n,good_lep_1_index):
+def find_good_lep_2_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,lep_isTightID,lep_z0,lep_d0,lep_sigd0,
+                          good_lep_1_index):
     if good_lep_1_index!=-1:
         for i in range(good_lep_1_index+1,lep_n):
-            return i
+            if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+                if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
+                theta_i = 2*math.atan(math.exp(-lep_eta[i]))
+                if abs(lep_z0[i]*math.sin(theta_i))<0.5:
+                    return i
     return -1
 
 def find_good_jet_0_index(jet_n,jet_pt,jet_eta,jet_jvt):
@@ -199,7 +209,8 @@ def mc_type(sample):
     elif sample in samples['WW']['list']: return 1
     elif sample in samples['ttbar']['list']: return 2
     elif sample in samples['Z']['list']: return 3
-    else: return 4 # data
+    #elif sample in samples['Wt']['list']: return 5
+    else: return 4 #data
 
 # return number to represent which channel
 def channel(lep_type,good_lep_0_index,good_lep_1_index):
@@ -224,7 +235,10 @@ def calc_mll(lep_pt,lep_eta,lep_phi,lep_E,good_lep_0_index,good_lep_1_index):
 
 # calculate azimuthal angle difference between the 2 leptons
 def calc_dPhiLL(lep_phi,good_lep_0_index,good_lep_1_index):
-    return round(abs(lep_phi[good_lep_0_index]-lep_phi[good_lep_1_index]),2)
+    dPhi = lep_phi[good_lep_0_index]-lep_phi[good_lep_1_index]
+    if dPhi >= math.pi: dPhi -= 2*math.pi
+    elif dPhi < -math.pi: dPhi += 2*math.pi
+    return round(abs(dPhi),2)
 
 # calculate azimuthal angle difference between the MET and the vector sum of the 2 leptons
 def calc_dPhiLLmet(lep_pt,lep_phi,met_phi,good_lep_0_index,good_lep_1_index):
@@ -234,9 +248,11 @@ def calc_dPhiLLmet(lep_pt,lep_phi,met_phi,good_lep_0_index,good_lep_1_index):
     py_1 = lep_pt[good_lep_1_index]*math.sin(lep_phi[good_lep_1_index])
     sumpx = px_0 + px_1
     sumpy = py_0 + py_1
-    sumpt = math.sqrt(sumpx**2 + sumpy**2)
-    phi_LL = np.sign(sumpy)*math.acos(sumpx/sumpt)
-    return round(abs(phi_LL - met_phi),2)
+    phi_LL = math.atan2(sumpy,sumpx) # normal arctan but returns angle from -pi to +pi
+    dPhi = phi_LL - met_phi
+    if dPhi >= math.pi: dPhi -= 2*math.pi
+    elif dPhi < -math.pi: dPhi += 2*math.pi
+    return round(abs(dPhi),2)
 
 # calculate the pt of the vector sum of the 2 leptons
 def calc_ptLL(lep_pt,lep_phi,good_lep_0_index,good_lep_1_index):
@@ -249,8 +265,14 @@ def calc_ptLL(lep_pt,lep_phi,good_lep_0_index,good_lep_1_index):
     return round(math.sqrt(sumpx**2 + sumpy**2)/1000,2) #/1000 to go from MeV to GeV 
     
 # calculate transverse mass
-def calc_mT(ptLL,met_et,dPhiLLmet):
-    return round(math.sqrt(2*ptLL*(met_et/1000)*(1-math.cos(dPhiLLmet))),2)
+def calc_Mt(lep_pt,lep_eta,lep_E,met_et,good_lep_0_index,good_lep_1_index):
+    E = (lep_E[good_lep_0_index]+lep_E[good_lep_1_index]+met_et)
+    pz_0 = lep_pt[good_lep_0_index]*math.sinh(lep_eta[good_lep_0_index])
+    pz_1 = lep_pt[good_lep_1_index]*math.sinh(lep_eta[good_lep_1_index])
+    sumpz = pz_0 + pz_1
+    Mt2 = E**2 - sumpz**2
+    Mt = math.sqrt(Mt2)/1000
+    return round(Mt,2)
 
 # determine whether any jets are bjets
 def bjets(jet_MV2c10,
@@ -266,11 +288,11 @@ def bjets(jet_MV2c10,
 
 
 # throw away events that don't have 2 leptons
-def cut_good_lep_n(good_lep_1_index,lep_2_index):
-    # return when number of good leptons is not equal to 2                                                               
-    # good_lep_index_1==-1 means there's no 2nd good lepton                                                              
-    # lep_index_2!=-1 means there's a 3rd lepton                                                                         
-    return good_lep_1_index==-1 or lep_2_index!=-1
+def cut_good_lep_n(good_lep_1_index,good_lep_2_index):
+    # return when number of good leptons is not equal to 2
+    # good_lep_index_1==-1 means there's no 2nd good lepton
+    # lep_index_2!=-1 means there's a 3rd lepton
+    return good_lep_1_index==-1 or good_lep_2_index!=-1
 
 # throw away events that don't have opposite-charge leptons
 def cut_lep_charge(lep_charge,good_lep_0_index,good_lep_1_index):
@@ -278,20 +300,20 @@ def cut_lep_charge(lep_charge,good_lep_0_index,good_lep_1_index):
     # first lepton is [0], 2nd lepton is [1]                                                                             
     return lep_charge[good_lep_0_index] + lep_charge[good_lep_1_index] != 0
 
-# throw away events where either 2nd lepton has pt < 15 GeV
-def cut_lep_pt(lep_pt,good_lep_1_index):
-    return lep_pt[good_lep_1_index] < 22000
-
-
-def calc_good_jet_n(good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,
+def calc_good_jet_n(jet_pt,good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,
                       good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index):
     all_jets_indices = [good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,good_jet_5_index,good_jet_6_index,good_jet_7_index,good_jet_8_index]
     good_jets_indices = [jet_i for jet_i in all_jets_indices if jet_i!=-1]
-    return len(good_jets_indices)
+    pt30_jets_indices = [jet_i for jet_i in good_jets_indices if jet_pt[jet_i]>30000]
+    return len(pt30_jets_indices)
 
 # throw away events where Transverse Mass is < 50 GeV
-def mT_cut(TransMass):
-    return TransMass < 50
+def cut_Mt_lower(TransMass):
+    return TransMass<50
+
+# throw away events where Transverse Mass is > 300 GeV
+def cut_Mt_upper(TransMass):
+    return TransMass>300
 
 # throw away events where Mll < 10 GeV
 def Mll_cut_lower(Mll):
@@ -301,9 +323,14 @@ def Mll_cut_lower(Mll):
 def cut_weight(weight):
     return weight==0
 
-# throw away events which aren't emu channel
-def channel_cut(lep_type,good_lep_0_index,good_lep_1_index):
-    return lep_type[good_lep_0_index]*lep_type[good_lep_1_index]!=143
+def Mll_cut_upper(Mll):
+    return Mll>105
+
+def cut_SumLepPt(SumLepPt):
+    return SumLepPt>200
+
+def cut_met_et(met_et):
+    return met_et>200*1000
 
 def read_file(path,sample):
     start = time.time()
@@ -328,7 +355,9 @@ def read_file(path,sample):
         data['good_lep_1_index'] = np.vectorize(find_good_lep_1_index)(data.lep_n,data.lep_type,data.lep_pt,data.lep_eta,
                                                                        data.lep_ptcone30,data.lep_etcone20,data.lep_isTightID,
                                                                        data.lep_z0,data.lep_trackd0pvunbiased,data.lep_tracksigd0pvunbiased,data.good_lep_0_index)
-        data['lep_2_index'] = np.vectorize(find_lep_2_index)(data.lep_n,data.good_lep_1_index)
+        data['good_lep_2_index'] = np.vectorize(find_good_lep_2_index)(data.lep_n,data.lep_type,data.lep_pt,data.lep_eta,
+                                                                       data.lep_ptcone30,data.lep_etcone20,data.lep_isTightID,
+                                                                       data.lep_z0,data.lep_trackd0pvunbiased,data.lep_tracksigd0pvunbiased,data.good_lep_1_index)
         data['good_jet_0_index'] = np.vectorize(find_good_jet_0_index)(data.jet_n,data.jet_pt,
                                                                        data.jet_eta,data.jet_jvt)
         data['good_jet_1_index'] = np.vectorize(find_good_jet_1_index)(data.jet_n,data.jet_pt,
@@ -356,21 +385,15 @@ def read_file(path,sample):
                                                                       data.good_jet_7_index)
 
         # throw away events where number of leptons isn't 2
-        fail = data[ np.vectorize(cut_good_lep_n)(data.good_lep_1_index,data.lep_2_index) ].index
+        fail = data[ np.vectorize(cut_good_lep_n)(data.good_lep_1_index,data.good_lep_2_index) ].index
         data.drop(fail, inplace=True)
 
         # throw away events where leptons aren't oppositely charged
         fail = data[ np.vectorize(cut_lep_charge)(data.lep_charge,data.good_lep_0_index,data.good_lep_1_index) ].index
         data.drop(fail, inplace=True)
 
-        # cut on channel
-        #fail = data[ np.vectorize(channel_cut)(data.lep_type,data.good_lep_0_index,data.good_lep_1_index) ].index
-        #data.drop(fail, inplace=True)
-
-        # throw away events where 2nd lepton has pt < 15 GeV
-        fail = data[ np.vectorize(cut_lep_pt)(data.lep_pt,data.good_lep_1_index) ].index
+        fail = data[ np.vectorize(cut_met_et)(data.met_et) ].index
         data.drop(fail, inplace=True)
-
 
         # label for each mc type
         data['type'] = np.vectorize(mc_type)(sample)
@@ -379,7 +402,7 @@ def read_file(path,sample):
         data['Channel'] = np.vectorize(channel)(data.lep_type,data.good_lep_0_index,data.good_lep_1_index)
 
         # number of jets
-        data['NJets'] = np.vectorize(calc_good_jet_n)(data.good_jet_0_index,data.good_jet_1_index,data.good_jet_2_index,
+        data['NJets'] = np.vectorize(calc_good_jet_n)(data.jet_pt,data.good_jet_0_index,data.good_jet_1_index,data.good_jet_2_index,
                                           data.good_jet_3_index,data.good_jet_4_index,data.good_jet_5_index,
                                           data.good_jet_6_index,data.good_jet_7_index,data.good_jet_8_index)
 
@@ -391,6 +414,8 @@ def read_file(path,sample):
                                             data.good_lep_1_index)
         fail = data[ np.vectorize(Mll_cut_lower)(data.Mll) ].index
         data.drop(fail, inplace=True)
+        fail = data[ np.vectorize(Mll_cut_upper)(data.Mll) ].index
+        data.drop(fail, inplace=True)
 
         # Angular separation between leptons
         data['LepDeltaPhi'] = np.vectorize(calc_dPhiLL)(data.lep_phi,data.good_lep_0_index,data.good_lep_1_index)
@@ -401,14 +426,17 @@ def read_file(path,sample):
         # Sum of lepton pt
         data['SumLepPt'] = np.vectorize(calc_ptLL)(data.lep_pt,data.lep_phi,data.good_lep_0_index,
                                              data.good_lep_1_index        )
+        fail = data[ np.vectorize(cut_SumLepPt)(data.SumLepPt) ].index
+        data.drop(fail, inplace=True)
 
         # transverse mass
-        data['TransMass'] = np.vectorize(calc_mT)(data.SumLepPt,data.met_et,data.METLLDeltaPhi)
+        data['TransMass'] = np.vectorize(calc_Mt)(data.lep_pt,data.lep_eta,data.lep_E,data.met_et,data.good_lep_0_index,data.good_lep_1_index)
 
-        # cut out transverse mass below 50 GeV
-        fail = data[ np.vectorize(mT_cut)(data.TransMass) ].index
+        fail = data[ np.vectorize(cut_Mt_lower)(data.TransMass) ].index
         data.drop(fail, inplace=True)
-        data.drop(['TransMass'], axis=1, inplace=True)
+        # cut out transverse mass above 300 GeV
+        fail = data[ np.vectorize(cut_Mt_upper)(data.TransMass) ].index
+        data.drop(fail, inplace=True)
 
         # whether at least 1 jet is btagged
         data['BTags'] = np.vectorize(bjets)(data.jet_MV2c10,
@@ -422,7 +450,7 @@ def read_file(path,sample):
         else:
             data['weight'] = 1
 
-        data.drop(["lep_n","lep_pt","lep_eta","lep_phi","lep_E","lep_charge","lep_type","lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased","jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER","good_lep_0_index","good_lep_1_index","lep_2_index","good_jet_0_index","good_jet_1_index","good_jet_2_index","good_jet_3_index","good_jet_4_index","good_jet_5_index","good_jet_6_index","good_jet_7_index","good_jet_8_index"], axis=1, inplace=True)
+        data.drop(["TransMass","lep_n","lep_pt","lep_eta","lep_phi","lep_E","lep_charge","lep_type","lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased","jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER","good_lep_0_index","good_lep_1_index","good_lep_2_index","good_jet_0_index","good_jet_1_index","good_jet_2_index","good_jet_3_index","good_jet_4_index","good_jet_5_index","good_jet_6_index","good_jet_7_index","good_jet_8_index"], axis=1, inplace=True)
 
         # throw away events with weight 0
         fail = data[ np.vectorize(cut_weight)(data.weight) ].index

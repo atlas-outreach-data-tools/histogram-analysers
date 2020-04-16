@@ -84,9 +84,9 @@ MET = {
 
 METLLDeltaPhi = {
     # change plotting parameters
-    'bin_width':0.17,
-    'num_bins':18,
-    'xrange_min':0,
+    'bin_width':0.2,
+    'num_bins':32,
+    'xrange_min':-3.2,
     'log_y':False,
 
     # change aesthetic parameters if you want
@@ -98,9 +98,9 @@ METLLDeltaPhi = {
 
 LepDeltaPhi = {
     # change plotting parameters
-    'bin_width':0.17,
-    'num_bins':18,
-    'xrange_min':0,
+    'bin_width':0.2,
+    'num_bins':32,
+    'xrange_min':-3.2,
     'log_y':False,
 
     # change aesthetic parameters if you want
@@ -124,4 +124,4 @@ TransMass = {
     'linear_top_margin':1.4 # to decrease the separation between data and the top of the figure, pick a number closer to 1
 }
 
-hist_dict = {"Channel":Channel,"Mll":Mll,"NJets":NJets,"BTags":BTags,"SumLepPt":SumLepPt,"MET":MET,"METLLDeltaPhi":METLLDeltaPhi,"LepDeltaPhi":LepDeltaPhi,"TransMass":TransMass}
+hist_dict = {"Mll":Mll,"NJets":NJets,"BTags":BTags,"SumLepPt":SumLepPt,"MET":MET,"METLLDeltaPhi":METLLDeltaPhi,"LepDeltaPhi":LepDeltaPhi,"TransMass":TransMass}#"Channel":Channel
