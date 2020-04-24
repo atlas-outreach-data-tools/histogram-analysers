@@ -124,4 +124,4 @@ TransMass = {
     'linear_top_margin':1.4 # to decrease the separation between data and the top of the figure, pick a number closer to 1
 }
 
-hist_dict = {"Mll":Mll,"NJets":NJets,"BTags":BTags,"SumLepPt":SumLepPt,"MET":MET,"METLLDeltaPhi":METLLDeltaPhi,"LepDeltaPhi":LepDeltaPhi,"TransMass":TransMass}#"Channel":Channel
+hist_dict = {"Mll":Mll,"NJets":NJets,"BTags":BTags,"SumLepPt":SumLepPt,"MET":MET,"METLLDeltaPhi":METLLDeltaPhi,"LepDeltaPhi":LepDeltaPhi,"TransMass":TransMass}#,"Channel":Channel}

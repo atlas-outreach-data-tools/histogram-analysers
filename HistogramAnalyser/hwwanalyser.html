@@ -46,7 +46,7 @@
     <script charset="utf-8" type="text/javascript" src="dc.js"></script>
     <script charset="utf-8" type="text/javascript">
 
-      d3.csv("13TeVTransData.csv", function(error, events) {
+      d3.csv("13TeV_TransData.csv", function(error, events) {
 
           events.forEach(function(x) {
              x.weight = +x.weight;
@@ -67,7 +67,7 @@
              return [0,0,0,0,0];
           }
           
-          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318"]);
+          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318","#9F58C2","#955245","#F662C3"]);
           var ndx                       = crossfilter(events),
               njetDimension             = ndx.dimension(function(d) {return +d.NJets;}),
               typeDimension             = ndx.dimension(function(d) {return +d.type;}),
@@ -76,7 +76,6 @@
               SumLepPtDimension         = ndx.dimension(function(d) {return +Math.floor(d.SumLepPt*0.1)*10;}),
               ZWindowDimension          = ndx.dimension(function(d) {return +Math.floor(d.Mll*0.2)*5;}),
               TransMassDimension        = ndx.dimension(function(d) {return +Math.floor(d.TransMass*0.1)*10;}),
-              ChannelDimension          = ndx.dimension(function(d) {return +d.Channel;}),
               DeltaPhiDimension         = ndx.dimension(function(d) {return +Math.floor(d.LepDeltaPhi*0.31813*18)*10;})
               BTagDimension             = ndx.dimension(function(d) {return +d.BTags})
               NJetGroup                 = njetDimension.group().reduce(add_by_channel,remove_by_channel, initial),
@@ -87,17 +86,16 @@
               BTagGroup                 = BTagDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               compGroup                 = typeDimension.group().reduceSum(function(d) {return +d.weight;}),
               mcstatGroup               = typeDimension.group().reduceCount(),
-              ChannelGroup              = ChannelDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               METGroup                  = METDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               DeltaPhiGroup             = DeltaPhiDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               SignificanceGroup         = typeDimension.groupAll().reduce(
                   function (p, v) {
-                      if (v.type == 0) p.sig += v.weight;
+                      if (v.type == 1) p.sig += v.weight;
                       else p.bkg += v.weight;
                       return p;
                   },
                   function (p, v) {
-                      if (v.type == 0) p.sig -= v.weight;
+                      if (v.type == 1) p.sig -= v.weight;
                       else p.bkg -= v.weight;
                       return p;
                   },
@@ -111,11 +109,14 @@
            }
           
            function type(i){
-              if (i == "0") return "H \u2192 WW";
-              if (i == "1") return "WW";
-              if (i == "2") return "ttbar";
-              if (i == "3") return "Z";
-              if (i == "4") return "data";
+              if (i == "1") return "H \u2192 WW";
+              if (i == "2") return "WW";
+              if (i == "3") return "ttbar";
+              if (i == "4") return "Z";
+	      if (i == "5") return "single top";
+	      if (i == "6") return "WZ/ZZ";
+	      if (i == "7") return "W";
+              if (i == "0") return "data";
               return "default"
            }
           
@@ -133,10 +134,13 @@
                   .yAxisPadding("20%")
                   .clipPadding(10)
                   .dimension(dimension)
-                  .group(group, "HWW",   sel_stack('0'))
-                  .stack(group, "WW",    sel_stack('1'))
-                  .stack(group, "ttbar", sel_stack('2'))
-                  .stack(group, "Z",     sel_stack('3'))
+                  .group(group, "H \u2192 WW",        sel_stack('1'))
+                  .stack(group, "WW",         sel_stack('2'))
+                  .stack(group, "ttbar",      sel_stack('3'))
+                  .stack(group, "Z",          sel_stack('4'))
+		  .stack(group, "single top", sel_stack('5'))
+		  .stack(group, "WZ/ZZ",      sel_stack('6'))
+		  .stack(group, "W",          sel_stack('7'))
                .on('renderlet', function(chart) {
                  chart.selectAll('.x-axis-label').attr('transform', 'translate(345,238)').attr('text-anchor', 'end');
                  chart.selectAll('.y-axis-label').attr('transform', 'rotate(-90), translate(-30,12)');
@@ -157,8 +161,8 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5;},
-                     y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4])); },
-                     y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4])); }
+                     y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0])); },
+                     y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0])); }
                    });
                  bar.append('line')
                    .attr({
@@ -167,8 +171,8 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5 - endwid;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5 + endwid; },
-                     y1: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));},
-                     y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));}
+                     y1: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));},
+                     y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));}
                    });
                  bar.append('line')
                    .attr({
@@ -177,14 +181,14 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5 - endwid;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5 + endwid;},
-                     y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));},
-                     y2: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));}
+                     y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));},
+                     y2: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));}
                    });
                  bar.append('circle')
                    .attr({
                      stroke: 'black',
                      cx: function(d) { return chart.x()(d.key)+barWidth*0.5;},
-                     cy: function(d) { return chart.y()(d.value[4]);},
+                     cy: function(d) { return chart.y()(d.value[0]);},
                      r: function(d)  { return 2;}
                    });
                })
@@ -198,21 +202,21 @@
                                .transition()
                                .duration(750)
                      
-                     bar.select('circle').attr({cy: function(d) { return chart.y()(d.value[4]);}});
+                     bar.select('circle').attr({cy: function(d) { return chart.y()(d.value[0]);}});
                      bar.select('line.errorwidth')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4])); },
-                         y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4])); }
+                         y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0])); },
+                         y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0])); }
                        });
                      bar.select('line.lowererror')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));},
-                         y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));}
+                         y1: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));},
+                         y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));}
                        });
                      bar.select('line.uppererror')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));},
-                         y2: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));}
+                         y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));},
+                         y2: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));}
                        });
                    })
              return chart
@@ -250,7 +254,7 @@
               return {
                   all:function () {
                       return source_group.all().filter(function(d) {
-                          return d.key != 4;
+                          return d.key != 0;
                       });
                   }
               };
@@ -265,7 +269,7 @@
                      .group(remove_data(compGroup))
                      .label(function(d) {
                             val = type(d.key) + " (" + d.value.toFixed(0) + ")"
-                            return (d.key != 0) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
+                            return (d.key != 1) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
                      })
                      .elasticX(true)
                      .colors(colorScale)                 

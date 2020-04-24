@@ -68,7 +68,7 @@
     <script charset="utf-8" type="text/javascript" src="dc.js"></script>
     <script charset="utf-8" type="text/javascript">
 
-      d3.csv("13TeVoutreach.csv", function(error, events) {
+      d3.csv("13TeV_outreach.csv", function(error, events) {
 
           events.forEach(function(x) {
              x.weight = +x.weight;
@@ -112,12 +112,12 @@
               DeltaPhiGroup             = DeltaPhiDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               SignificanceGroup         = typeDimension.groupAll().reduce(
                   function (p, v) {
-                      if (v.type == 0) p.sig += v.weight;
+                      if (v.type == 1) p.sig += v.weight;
                       else p.bkg += v.weight;
                       return p;
                   },
                   function (p, v) {
-                      if (v.type == 0) p.sig -= v.weight;
+                      if (v.type == 1) p.sig -= v.weight;
                       else p.bkg -= v.weight;
                       return p;
                   },
@@ -131,10 +131,10 @@
            }
           
            function type(i){
-              if (i == "0") return "HWW";
-              if (i == "1") return "WW";
-              if (i == "2") return "ttbar";
-              if (i == "3") return "Z";
+              if (i == "1") return "H \u2192 WW";
+              if (i == "2") return "WW";
+              if (i == "3") return "ttbar";
+              if (i == "4") return "Z";
               return "default"
            }
           
@@ -151,10 +151,10 @@
                   // .yAxisPadding("5%")
                   .clipPadding(10)
                   .dimension(dimension)
-                  .group(group, "HWW",   sel_stack('0'))
-                  .stack(group, "WW",    sel_stack('1'))
-                  .stack(group, "ttbar", sel_stack('2'))
-                  .stack(group, "Z",     sel_stack('3'))
+                  .group(group, "H \u2192 WW", sel_stack('1'))
+                  .stack(group, "WW",          sel_stack('2'))
+                  .stack(group, "ttbar",       sel_stack('3'))
+                  .stack(group, "Z",           sel_stack('4'))
                   .on('renderlet', function (chart) {
                       chart.selectAll('.x-axis-label').attr('transform', 'translate(345,238)').attr('text-anchor', 'end');
                       chart.selectAll('.y-axis-label').attr('transform', 'rotate(-90), translate(-30,12)');

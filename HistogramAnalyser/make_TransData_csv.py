@@ -8,8 +8,8 @@ import infofile
 
 
 lumi = 10.0643 # 10 fb-1
-fraction = 0.05
-MC_to_data_ratio = 1
+fraction = 1
+MC_to_data_ratio = 0.2
 tuple_path = "/eos/project/a/atlas-outreach/projects/open-data/OpenDataTuples/renamedLargeRJets/2lep/" # local
 #tuple_path = "https://atlas-opendata.web.cern.ch/atlas-opendata/samples/2020/2lep/" # web
 
@@ -21,30 +21,39 @@ samples = {
     },
 
     'HWW' : {
-        'list' : ['VBFH125_WW2lep','ggH125_WW2lep'],#,'WpH125J_qqWW2lep','WpH125J_lvWW2lep','ZH125J_qqWW2lep','ZH125J_llWW2lep','ZH125J_vvWW2lep'],
+        'list' : ['VBFH125_WW2lep','ggH125_WW2lep','WpH125J_qqWW2lep','WpH125J_lvWW2lep','ZH125J_qqWW2lep','ZH125J_llWW2lep','ZH125J_vvWW2lep'],
         'color' : "#0074bf"
     },
 
     'WW' : {
-        'list' : ['llvv'],#,'WpqqWmlv','WplvWmqq','WqqZll','WlvZqq','lllv','lvvv','ZqqZll','llll'],
+        'list' : ['llvv','WpqqWmlv','WplvWmqq'],
         'color' : "#ff7400"
     },
 
     'ttbar' : {
-        'list' : ['ttbar_lep'],#,'single_top_wtchan','single_antitop_wtchan','single_top_tchan','single_antitop_tchan','single_top_schan','single_antitop_schan'],
+        'list' : ['ttbar_lep'],
         'color' : "#00ab00"
     },
 
     'Z' : {
-        'list' : ['Zee','Zmumu','Ztautau'],#,'Wplusenu','Wplusmunu','Wplustaunu','Wminusenu','Wminusmunu','Wminustaunu'],
-        #'Zmumu_PTV0_70_CVetoBVeto','Zmumu_PTV0_70_CFilterBVeto','Zmumu_PTV0_70_BFilter','Zmumu_PTV70_140_CVetoBVeto','Zmumu_PTV70_140_CFilterBVeto','Zmumu_PTV70_140_BFilter','Zmumu_PTV140_280_CVetoBVeto','Zmumu_PTV140_280_CFilterBVeto','Zmumu_PTV140_280_BFilter','Zmumu_PTV280_500_CVetoBVeto','Zmumu_PTV280_500_CFilterBVeto','Zmumu_PTV280_500_BFilter','Zmumu_PTV500_1000','Zmumu_PTV1000_E_CMS','Zee_PTV0_70_CFilterBVeto','Zee_PTV0_70_BFilter','Zee_PTV70_140_CVetoBVeto','Zee_PTV70_140_CFilterBVeto','Zee_PTV70_140_BFilter','Zee_PTV140_280_CVetoBVeto','Zee_PTV140_280_CFilterBVeto','Zee_PTV140_280_BFilter','Zee_PTV280_500_CVetoBVeto','Zee_PTV280_500_CFilterBVeto','Zee_PTV280_500_BFilter','Zee_PTV500_1000','Zee_PTV1000_E_CMS','Ztautau_PTV0_70_CVetoBVeto','Ztautau_PTV0_70_CFilterBVeto','Ztautau_PTV0_70_BFilter','Ztautau_PTV70_140_CVetoBVeto','Ztautau_PTV70_140_CFilterBVeto','Ztautau_PTV70_140_BFilter','Ztautau_PTV140_280_CVetoBVeto','Ztautau_PTV140_280_CFilterBVeto','Ztautau_PTV140_280_BFilter','Ztautau_PTV280_500_CVetoBVeto','Ztautau_PTV280_500_CFilterBVeto','Ztautau_PTV280_500_BFilter','Ztautau_PTV500_1000'],
+        'list' : ['Ztautau','Zee','Zmumu'],
         'color' : "#ed0000"
     },
 
-    #'Wt' : {
-    #    'list' : ['single_top_wtchan','single_antitop_wtchan'],#,'single_top_tchan','single_antitop_tchan','single_top_schan','single_antitop_schan'],
-    #    'color' : "#00c7f7"
-    #}
+    'single_top' : {
+        'list' : ['single_top_wtchan','single_antitop_wtchan','single_top_tchan','single_antitop_tchan','single_top_schan','single_antitop_schan'],
+        'color' : "#9F58C2"
+    },
+
+    'Diboson' : {
+        'list' : ['WqqZll','WlvZqq','lllv','lvvv','ZqqZll','llll'],
+        'color' : "#955245"
+    },
+
+    'W' : {
+        'list' : ['Wplusenu','Wplustaunu','Wminusmunu','Wplusmunu','Wminusenu'],#,'Wminustaunu'],
+        'color' : "#F662C3"
+    },
     
 }
 
@@ -89,11 +98,13 @@ def get_xsec_weight(totalWeight,sample):
     info = infofile.infos[sample]
     weight = (lumi*1000*info["xsec"])/(info["sumw"]*info["red_eff"]) #*1000 to go from fb-1 to pb-1
     weight *= totalWeight
+    if sample in samples['WW']['list']: weight *= 1.3 # normalisation scaling, from WW control region we need a factor of 1.3
+    elif sample in samples['Diboson']['list']: weight *= 1.3 # normalisation scaling
     return round(weight/MC_to_data_ratio,5)
 
 def find_good_lep_0_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,lep_isTightID,lep_z0,lep_d0,lep_sigd0):
     for i in range(lep_n):
-        if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+        if lep_pt[i]>25000 and abs(lep_eta[i])<2.5 and lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
             if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
             theta_i = 2*math.atan(math.exp(-lep_eta[i]))
             if abs(lep_z0[i]*math.sin(theta_i))<0.5:
@@ -104,7 +115,7 @@ def find_good_lep_1_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,le
                           good_lep_0_index):
     if good_lep_0_index!=-1:
         for i in range(good_lep_0_index+1,lep_n):
-            if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+            if lep_pt[i]>25000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
                 if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
                 theta_i = 2*math.atan(math.exp(-lep_eta[i]))
                 if abs(lep_z0[i]*math.sin(theta_i))<0.5:
@@ -115,7 +126,7 @@ def find_good_lep_2_index(lep_n,lep_type,lep_pt,lep_eta,lep_ptcone,lep_etcone,le
                           good_lep_1_index):
     if good_lep_1_index!=-1:
         for i in range(good_lep_1_index+1,lep_n):
-            if lep_pt[i]>15000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
+            if lep_pt[i]>25000 and abs(lep_eta[i])<2.5 and  lep_ptcone[i]/lep_pt[i]<0.1 and lep_etcone[i]/lep_pt[i]<0.1 and abs(lep_d0[i])/lep_sigd0[i]<5 and lep_isTightID[i]:
                 if lep_type[i]==13 and abs(lep_d0[i])/lep_sigd0[i]>3: continue
                 theta_i = 2*math.atan(math.exp(-lep_eta[i]))
                 if abs(lep_z0[i]*math.sin(theta_i))<0.5:
@@ -206,12 +217,14 @@ def find_good_jet_8_index(jet_n,jet_pt,jet_eta,jet_jvt,good_jet_7_index):
 
 # return number to represent which process
 def mc_type(sample):
-    if sample in samples['HWW']['list']: return 0
-    elif sample in samples['WW']['list']: return 1
-    elif sample in samples['ttbar']['list']: return 2
-    elif sample in samples['Z']['list']: return 3
-    #elif sample in samples['Wt']['list']: return 5
-    else: return 4 #data
+    if sample in samples['HWW']['list']: return 1
+    elif sample in samples['WW']['list']: return 2
+    elif sample in samples['ttbar']['list']: return 3
+    elif sample in samples['Z']['list']: return 4
+    elif sample in samples['single_top']['list']: return 5
+    elif sample in samples['Diboson']['list']: return 6
+    elif sample in samples['W']['list']: return 7
+    else: return 0 #data
 
 # return number to represent which channel
 def channel(lep_type,good_lep_0_index,good_lep_1_index):
@@ -290,15 +303,15 @@ def bjets(jet_MV2c10,
 
 # throw away events that don't have 2 leptons
 def cut_good_lep_n(good_lep_1_index,good_lep_2_index):
-    # return when number of good leptons is not equal to 2                                                               
-    # good_lep_index_1==-1 means there's no 2nd good lepton                                                              
-    # lep_index_2!=-1 means there's a 3rd lepton                                                                         
+    # return when number of good leptons is not equal to 2
+    # good_lep_index_1==-1 means there's no 2nd good lepton
+    # lep_index_2!=-1 means there's a 3rd lepton
     return good_lep_1_index==-1 or good_lep_2_index!=-1
 
 # throw away events that don't have opposite-charge leptons
 def cut_lep_charge(lep_charge,good_lep_0_index,good_lep_1_index):
-    # return when sum of lepton charges is not equal to 0                                                                
-    # first lepton is [0], 2nd lepton is [1]                                                                             
+    # return when sum of lepton charges is not equal to 0
+    # first lepton is [0], 2nd lepton is [1]
     return lep_charge[good_lep_0_index] + lep_charge[good_lep_1_index] != 0
 
 def calc_good_jet_n(jet_pt,good_jet_0_index,good_jet_1_index,good_jet_2_index,good_jet_3_index,good_jet_4_index,
@@ -308,9 +321,7 @@ def calc_good_jet_n(jet_pt,good_jet_0_index,good_jet_1_index,good_jet_2_index,go
     pt30_jets_indices = [jet_i for jet_i in good_jets_indices if jet_pt[jet_i]>30000]
     return len(pt30_jets_indices)
 
-def cut_Mt_lower(TransMass):
-    return TransMass<50
-
+# throw away events where TransMass > 300 GeV
 def cut_Mt_upper(TransMass):
     return TransMass>300
 
@@ -318,27 +329,21 @@ def cut_Mt_upper(TransMass):
 def Mll_cut_lower(Mll):
     return Mll<10
 
+# throw away events where Mll > 105 GeV
 def Mll_cut_upper(Mll):
     return Mll>105
 
+# throw away events where SumLepPt > 200 GeV
 def cut_SumLepPt(SumLepPt):
     return SumLepPt>200
 
+# throw away events where MET > 200 GeV
 def cut_met_et(met_et):
     return met_et>200*1000
 
-def cut_LepDeltaPhi(LepDeltaPhi):
-    return LepDeltaPhi==0
-
-def cut_METLLDeltaPhi(METLLDeltaPhi):
-    return METLLDeltaPhi==0
-
-# throw away events where weight is 0
+# throw away events where weight is less than 0.00005
 def cut_weight(weight):
     return weight<0.00005
-
-def cut_weight_upper(weight):
-    return weight>=1
 
 # throw away events which aren't emu channel
 def channel_cut(lep_type,good_lep_0_index,good_lep_1_index):
@@ -358,7 +363,7 @@ def read_file(path,sample):
                             "lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased",
                             "jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi",
                          "mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON", # add more variables here if you make cuts on them ,              
-                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2459370, outputtype=pd.DataFrame, entrystart=entrystart, entrystop=entrystop):
+                            "scaleFactor_LepTRIGGER"], flatten=False, entrysteps=2212282, outputtype=pd.DataFrame, entrystart=entrystart, entrystop=entrystop):
 
         nIn = len(data.index)
 
@@ -436,20 +441,14 @@ def read_file(path,sample):
 
         # transverse mass
         data['TransMass'] = np.vectorize(calc_Mt)(data.lep_pt,data.lep_eta,data.lep_E,data.met_et,data.good_lep_0_index,data.good_lep_1_index)
-        fail = data[ np.vectorize(cut_Mt_lower)(data.TransMass) ].index
-        data.drop(fail, inplace=True)
         fail = data[ np.vectorize(cut_Mt_upper)(data.TransMass) ].index
         data.drop(fail, inplace=True)
 
         # Angular separation between leptons
         data['LepDeltaPhi'] = np.vectorize(calc_dPhiLL)(data.lep_phi,data.good_lep_0_index,data.good_lep_1_index)
-        fail = data[ np.vectorize(cut_LepDeltaPhi)(data.LepDeltaPhi) ].index
-        data.drop(fail, inplace=True)
 
         # Angular separation between leptons and MET dPhi(MET,ll)
         data['METLLDeltaPhi'] = np.vectorize(calc_dPhiLLmet)(data.lep_pt,data.lep_phi,data.met_phi,data.good_lep_0_index,data.good_lep_1_index)
-        fail = data[ np.vectorize(cut_METLLDeltaPhi)(data.METLLDeltaPhi) ].index
-        data.drop(fail, inplace=True)
 
         # Sum of lepton pt
         data['SumLepPt'] = np.vectorize(calc_ptLL)(data.lep_pt,data.lep_phi,data.good_lep_0_index,
@@ -466,10 +465,8 @@ def read_file(path,sample):
         if 'data' not in sample:
             data['weight'] = np.vectorize(calc_weight)(data.mcWeight,data.scaleFactor_PILEUP,data.scaleFactor_ELE,data.scaleFactor_MUON,data.scaleFactor_LepTRIGGER)
             data['weight'] = np.vectorize(get_xsec_weight)(data.weight,sample)
-            # throw away events with weight 0
+            # throw away events with weight < 0.00005
             fail = data[ np.vectorize(cut_weight)(data.weight) ].index
-            data.drop(fail, inplace=True)
-            fail = data[ np.vectorize(cut_weight_upper)(data.weight) ].index
             data.drop(fail, inplace=True)
         else:
             data['weight'] = 1
@@ -477,7 +474,7 @@ def read_file(path,sample):
         data.drop(["lep_n","lep_pt","lep_eta","lep_phi","lep_E","lep_charge","lep_type","lep_isTightID","lep_ptcone30","lep_etcone20","lep_z0","lep_trackd0pvunbiased","lep_tracksigd0pvunbiased","jet_n","jet_pt","jet_eta","jet_jvt","jet_MV2c10","met_et","met_phi","mcWeight","scaleFactor_PILEUP","scaleFactor_ELE","scaleFactor_MUON","scaleFactor_LepTRIGGER","good_lep_0_index","good_lep_1_index","good_lep_2_index","good_jet_0_index","good_jet_1_index","good_jet_2_index","good_jet_3_index","good_jet_4_index","good_jet_5_index","good_jet_6_index","good_jet_7_index","good_jet_8_index"], axis=1, inplace=True)
 
         #print(data[['LepDeltaPhi','METLLDeltaPhi','TransMass','weight']])
-        #print(data['LepDeltaPhi'])
+        #print(data['weight'])
 
         nOut = len(data.index)
         data_all = data_all.append(data)
@@ -489,6 +486,12 @@ def read_file(path,sample):
 
 start = time.time()
 data = get_data_from_files()
+print('data events ',sum(data['data']['weight']))
+MC_sum_weights = 0
+for s in samples:
+    if s!='data':
+        MC_sum_weights += sum(data[s]['weight'])
+print('MC sum of weights ',MC_sum_weights)
 elapsed = time.time() - start
 print("Time taken: "+str(elapsed))
 
@@ -496,7 +499,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator,LogLocator,LogFormatterSciNotation # for minor ticks
 import HWWHistograms
 import labelfile
-stack_order = ['WW','ttbar','Z']
+stack_order = ['WW','ttbar','Z','single_top','Diboson','W']
 
 def plot_data(data):
 
@@ -656,4 +659,4 @@ def plot_data(data):
     
     return signal_x,mc_x_tot
 
-#signal_yields,background_yields = plot_data(data)
+signal_yields,background_yields = plot_data(data)
