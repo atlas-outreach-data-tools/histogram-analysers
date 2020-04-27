@@ -198,7 +198,7 @@
                      .group(compGroup)
                      .label(function(d) {
                             val = type(d.key) + " (" + d.value.toFixed(0) + ")"
-                            return (d.key != 0) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
+                            return (d.key != 1) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
                      })
           
                      .elasticX(true)
