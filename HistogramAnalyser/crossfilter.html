@@ -37,9 +37,9 @@
     <td valign="bottom">Number of Jets</td>
   </tr>
   <tr>
-    <td><div id="hist1"></div></td>
-    <td><div id="hist2"></div></td>
-    <td><div id="hist3"></div></td>
+    <td><div id="hist1" title="Channel: The leptonic decay channels are shown here: dielectron (ee), dimuon (mm) and electron-muon (em)"></div></td>
+    <td><div id="hist2" title="Reconstructed Dilepton Mass (M(ll)): the mass reconstructed from the two leptons in the final state."></div></td>
+    <td><div id="hist3" title="Number of Jets (N(Jets)): number of jets in the event."></div></td>
   </tr>
   <tr style="height: 50px">
     <td valign="bottom">Are Jets b-tagged?</td>
@@ -47,9 +47,9 @@
     <td valign="bottom">Missing Transverse Momentum (MET) [GeV]</td>
   </tr>
   <tr>
-    <td><div id="hist4"></div></td>
-    <td><div id="hist5"></div></td>
-    <td><div id="hist6"></div></td>
+    <td><div id="hist4" title="Are Jets b-tagged? (BTag) : jets originating from b-quarks are identified and labelled, or tagged, using so-called b-tagging algorithms."></div></td>
+    <td><div id="hist5" title="Total Lepton Transverse Momentum (PT(ll)): this is the vectorial sum of the transverse momenta of the observed charged leptons."></div></td>
+    <td><div id="hist6" title="Missing Transverse Momentum (MET) : MET is used to infer the presence of non-detectable particles such as the neutrino."></div></td>
   </tr>
   <tr style="height: 50px">
     <td valign="bottom">Opening Angle Between MET and Leptons [phi]</td>
@@ -57,9 +57,10 @@
     <td valign="bottom">Expected Number of Events for 10/fb</td>
   </tr>
   <tr>
-    <td><div id="hist7"></div></td>
-    <td><div id="hist8"></div></td>
-    <td><div id="hist9"></div></td>
+    <td><div id="hist7" title="Opening Angle Between MET and Leptons (DeltaPhi(MET,ll)): This is the opening angle, measured in phi (&phi;), between the missing transverse momentum (MET) and the two leptons."></div></td>
+    <td><div id="hist8" title="Opening Angle Between Leptons (DeltaPhi(l,l)): this is the angle, measured in phi (&phi;), between the two leptons. The azimuthal angle &phi; is measured from the x-axis, around the beam."></div></td>
+    <td><div id="hist9" title="Number of Expected Events: the number of events expected to be detected, reconstructed and recorded by ATLAS for 10 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
+
  </table>
 </div>
 
@@ -143,7 +144,7 @@
              chart.width(350)
                   .height(250)
                   .x(d3.scale.linear().domain(domain))
-                  .margins({left: 50, top: 10, right: 10, bottom: 35})
+                  .margins({left: 60, top: 10, right: 10, bottom: 35})
                   .brushOn(true)
                   .elasticY(true)
                   .xAxisLabel(label)

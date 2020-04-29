@@ -24,20 +24,35 @@
   <body>
     <div style="width:1050px">
 <table style="width:100%">
+  <tr style="height: 50px">
+    <td valign="bottom">Transverse Mass [GeV]</td>
+    <td valign="bottom">Reconstructed Dilepton Mass [GeV]</td>
+    <td valign="bottom">Number of Jets</td>
+  </tr>
   <tr>
     <td><div id="hist1" title="Transverse Mass:  transverse mass is analogous to invariant mass but neglects the longitudinal momenta of the decay products."></div></td>
     <td><div id="hist2" title="Reconstructed Dilepton Mass (M(ll)): the mass reconstructed from the two leptons in the final state."></div></td>
     <td><div id="hist3" title="Number of Jets (N(Jets)): number of jets in the event."></div></td>
+  </tr>
+  <tr style="height: 50px">
+    <td valign="bottom">Are Jets b-tagged?</td>
+    <td valign="bottom">Total Lepton Transverse Momentum [GeV]</td>
+    <td valign="bottom">Missing Transverse Momentum (MET) [GeV]</td>
   </tr>
   <tr>
     <td><div id="hist4" title="Are Jets b-tagged? (BTag) : jets originating from b-quarks are identified and labelled, or tagged, using so-called b-tagging algorithms."></div></td>
     <td><div id="hist5" title="Total Lepton Transverse Momentum (PT(ll)): this is the vectorial sum of the transverse momenta of the observed charged leptons."></div></td>
     <td><div id="hist6" title="Missing Transverse Momentum (MET) : MET is used to infer the presence of non-detectable particles such as the neutrino."></div></td>
   </tr>
+  <tr style="height: 50px">
+    <td valign="bottom">Opening Angle Between MET and Leptons [phi]</td>
+    <td valign="bottom">Opening Angle Between Leptons [phi]</td>
+    <td valign="bottom">Expected Number of Events for 10/fb</td>
+  </tr>
   <tr>
     <td><div id="hist7" title="Opening Angle Between MET and Leptons (DeltaPhi(MET,ll)): This is the opening angle, measured in phi (&phi;), between the missing transverse momentum (MET) and the two leptons."></div></td>
     <td><div id="hist8" title="Opening Angle Between Leptons (DeltaPhi(l,l)): this is the angle, measured in phi (&phi;), between the two leptons. The azimuthal angle &phi; is measured from the x-axis, around the beam."></div></td>
-    <td><div id="hist9" title="Number of Expected Events: the number of events expected to be detected, reconstructed and recorded by ATLAS for 1 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
+    <td><div id="hist9" title="Expected Number of Events for 10/fb: the number of events expected to be detected, reconstructed and recorded by ATLAS for 10 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
  </table>
 </div>
 
@@ -67,7 +82,7 @@
              return [0,0,0,0,0];
           }
           
-          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318","#9F58C2","#955245","#F662C3"]);
+          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318","#9F58C2"]);
           var ndx                       = crossfilter(events),
               njetDimension             = ndx.dimension(function(d) {return +d.NJets;}),
               typeDimension             = ndx.dimension(function(d) {return +d.type;}),
@@ -113,9 +128,7 @@
               if (i == "2") return "WW";
               if (i == "3") return "ttbar";
               if (i == "4") return "Z";
-	      if (i == "5") return "single top";
-	      if (i == "6") return "WZ/ZZ";
-	      if (i == "7") return "W";
+	      if (i == "5") return "Other";
               if (i == "0") return "data";
               return "default"
            }
@@ -134,13 +147,11 @@
                   .yAxisPadding("20%")
                   .clipPadding(10)
                   .dimension(dimension)
-                  .group(group, "H \u2192 WW",        sel_stack('1'))
-                  .stack(group, "WW",         sel_stack('2'))
-                  .stack(group, "ttbar",      sel_stack('3'))
-                  .stack(group, "Z",          sel_stack('4'))
-		  .stack(group, "single top", sel_stack('5'))
-		  .stack(group, "WZ/ZZ",      sel_stack('6'))
-		  .stack(group, "W",          sel_stack('7'))
+                  .group(group, "H \u2192 WW", sel_stack('1'))
+                  .stack(group, "WW",          sel_stack('2'))
+                  .stack(group, "ttbar",       sel_stack('3'))
+                  .stack(group, "Z",           sel_stack('4'))
+		  .stack(group, "Other",       sel_stack('5'))
                .on('renderlet', function(chart) {
                  chart.selectAll('.x-axis-label').attr('transform', 'translate(345,238)').attr('text-anchor', 'end');
                  chart.selectAll('.y-axis-label').attr('transform', 'rotate(-90), translate(-30,12)');
@@ -272,7 +283,10 @@
                             return (d.key != 1) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
                      })
                      .elasticX(true)
-                     .colors(colorScale)                 
+                     .colors(colorScale)
+		     .on('renderlet', function (chart) {
+                         chart.selectAll('g.axis text').attr('transform', 'translate(-10,10) rotate(315)');
+                     });                 
          
          
          
@@ -294,7 +308,7 @@
               .text(displayText);
       }
 
-      AddXAxis(mcCompChart, "Number of Expected Events");      
+      /*AddXAxis(mcCompChart, "Expected Number of Events for 10/fb");*/      
       });
 
     </script>
