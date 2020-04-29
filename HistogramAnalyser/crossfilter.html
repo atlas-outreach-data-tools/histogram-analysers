@@ -171,19 +171,19 @@
           var channelChart = make_barchart("#hist1", [0,3], "Channel", ChannelDimension, ChannelGroup)
           channelChart.xAxis().tickFormat(function(d){if(d == 0.5){return "ee"}; if(d == 1.5){return "mm"};if(d == 2.5){return "em";}});
 
-          var ZWindowChart = make_barchart("#hist2", [0,104.9], "M(ll)", ZWindowDimension, ZWindowGroup)
+          var ZWindowChart = make_barchart("#hist2", [0,104.9], "M(ll) [GeV]", ZWindowDimension, ZWindowGroup)
           ZWindowChart.xUnits(dc.units.fp.precision(5));
 
-          var METChart     = make_barchart("#hist6", [0,200], "MET", METDimension, METGroup)
+          var METChart     = make_barchart("#hist6", [0,200], "MET [GeV]", METDimension, METGroup)
           METChart.xUnits(dc.units.fp.precision(10));
 
-          var DeltaPhiMETLLChart    = make_barchart("#hist7", [0, 180],"DeltaPhi(MET,ll)" ,DeltaPhiMETLLDimension, DeltaPhiMETLLGroup)
+          var DeltaPhiMETLLChart    = make_barchart("#hist7", [0, 180],"DeltaPhi(MET,ll) [deg]" ,DeltaPhiMETLLDimension, DeltaPhiMETLLGroup)
           DeltaPhiMETLLChart.xUnits(dc.units.fp.precision(10));
 
-          var deltaphiChart = make_barchart("#hist8", [0,180], "DeltaPhi(l,l)", DeltaPhiDimension, DeltaPhiGroup)
+          var deltaphiChart = make_barchart("#hist8", [0,180], "DeltaPhi(l,l) [deg]", DeltaPhiDimension, DeltaPhiGroup)
           deltaphiChart.xUnits(dc.units.fp.precision(10));
 
-          var sumlepptChart = make_barchart("#hist5", [0,200], "PT(ll)", SumLepPtDimension, SumLepPtGroup)
+          var sumlepptChart = make_barchart("#hist5", [0,200], "PT(ll) [GeV]", SumLepPtDimension, SumLepPtGroup)
           sumlepptChart.xUnits(dc.units.fp.precision(10));
 
           var BTagChart = make_barchart("#hist4", [0,3], "BTag", BTagDimension, BTagGroup)
