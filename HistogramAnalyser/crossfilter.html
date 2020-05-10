@@ -37,9 +37,9 @@
     <td valign="bottom">Number of Jets</td>
   </tr>
   <tr>
-    <td><div id="hist1" title="Channel: The leptonic decay channels are shown here: dielectron (ee), dimuon (mm) and electron-muon (em)"></div></td>
-    <td><div id="hist2" title="Reconstructed Dilepton Mass (M(ll)): the mass reconstructed from the two leptons in the final state."></div></td>
-    <td><div id="hist3" title="Number of Jets (N(Jets)): number of jets in the event."></div></td>
+    <td><div id="hist1"></div></td>
+    <td><div id="hist2"></div></td>
+    <td><div id="hist3"></div></td>
   </tr>
   <tr style="height: 50px">
     <td valign="bottom">Are Jets b-tagged?</td>
@@ -47,20 +47,19 @@
     <td valign="bottom">Missing Transverse Momentum (MET) [GeV]</td>
   </tr>
   <tr>
-    <td><div id="hist4" title="Are Jets b-tagged? (BTag) : jets originating from b-quarks are identified and labelled, or tagged, using so-called b-tagging algorithms."></div></td>
-    <td><div id="hist5" title="Total Lepton Transverse Momentum (PT(ll)): this is the vectorial sum of the transverse momenta of the observed charged leptons."></div></td>
-    <td><div id="hist6" title="Missing Transverse Momentum (MET) : MET is used to infer the presence of non-detectable particles such as the neutrino."></div></td>
+    <td><div id="hist4"></div></td>
+    <td><div id="hist5"></div></td>
+    <td><div id="hist6"></div></td>
   </tr>
   <tr style="height: 50px">
     <td valign="bottom">Opening Angle Between MET and Leptons [phi]</td>
     <td valign="bottom">Opening Angle Between Leptons [phi]</td>
-    <td valign="bottom">Expected Number of Events for 10/fb</td>
+    <td valign="bottom">Expected Number of Events for 1/fb</td>
   </tr>
   <tr>
-    <td><div id="hist7" title="Opening Angle Between MET and Leptons (DeltaPhi(MET,ll)): This is the opening angle, measured in phi (&phi;), between the missing transverse momentum (MET) and the two leptons."></div></td>
-    <td><div id="hist8" title="Opening Angle Between Leptons (DeltaPhi(l,l)): this is the angle, measured in phi (&phi;), between the two leptons. The azimuthal angle &phi; is measured from the x-axis, around the beam."></div></td>
-    <td><div id="hist9" title="Number of Expected Events: the number of events expected to be detected, reconstructed and recorded by ATLAS for 10 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
-
+    <td><div id="hist7"></div></td>
+    <td><div id="hist8"></div></td>
+    <td><div id="hist9"></div></td>
  </table>
 </div>
 
@@ -69,7 +68,7 @@
     <script charset="utf-8" type="text/javascript" src="dc.js"></script>
     <script charset="utf-8" type="text/javascript">
 
-      d3.csv("13TeV_outreach.csv", function(error, events) {
+      d3.csv("outreach.csv", function(error, events) {
 
           events.forEach(function(x) {
              x.weight = +x.weight;
@@ -113,12 +112,12 @@
               DeltaPhiGroup             = DeltaPhiDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               SignificanceGroup         = typeDimension.groupAll().reduce(
                   function (p, v) {
-                      if (v.type == 1) p.sig += v.weight;
+                      if (v.type == 0) p.sig += v.weight;
                       else p.bkg += v.weight;
                       return p;
                   },
                   function (p, v) {
-                      if (v.type == 1) p.sig -= v.weight;
+                      if (v.type == 0) p.sig -= v.weight;
                       else p.bkg -= v.weight;
                       return p;
                   },
@@ -132,10 +131,10 @@
            }
           
            function type(i){
-              if (i == "1") return "H \u2192 WW";
-              if (i == "2") return "WW";
-              if (i == "3") return "ttbar";
-              if (i == "4") return "Z";
+              if (i == "0") return "HWW";
+              if (i == "1") return "WW";
+              if (i == "2") return "ttbar";
+              if (i == "3") return "Z";
               return "default"
            }
           
@@ -144,7 +143,7 @@
              chart.width(350)
                   .height(250)
                   .x(d3.scale.linear().domain(domain))
-                  .margins({left: 60, top: 10, right: 10, bottom: 35})
+                  .margins({left: 50, top: 10, right: 10, bottom: 35})
                   .brushOn(true)
                   .elasticY(true)
                   .xAxisLabel(label)
@@ -152,10 +151,10 @@
                   // .yAxisPadding("5%")
                   .clipPadding(10)
                   .dimension(dimension)
-                  .group(group, "H \u2192 WW", sel_stack('1'))
-                  .stack(group, "WW",          sel_stack('2'))
-                  .stack(group, "ttbar",       sel_stack('3'))
-                  .stack(group, "Z",           sel_stack('4'))
+                  .group(group, "HWW",   sel_stack('0'))
+                  .stack(group, "WW",    sel_stack('1'))
+                  .stack(group, "ttbar", sel_stack('2'))
+                  .stack(group, "Z",     sel_stack('3'))
                   .on('renderlet', function (chart) {
                       chart.selectAll('.x-axis-label').attr('transform', 'translate(345,238)').attr('text-anchor', 'end');
                       chart.selectAll('.y-axis-label').attr('transform', 'rotate(-90), translate(-30,12)');
@@ -171,19 +170,19 @@
           var channelChart = make_barchart("#hist1", [0,3], "Channel", ChannelDimension, ChannelGroup)
           channelChart.xAxis().tickFormat(function(d){if(d == 0.5){return "ee"}; if(d == 1.5){return "mm"};if(d == 2.5){return "em";}});
 
-          var ZWindowChart = make_barchart("#hist2", [0,104.9], "M(ll) [GeV]", ZWindowDimension, ZWindowGroup)
+          var ZWindowChart = make_barchart("#hist2", [0,104.9], "M(ll)", ZWindowDimension, ZWindowGroup)
           ZWindowChart.xUnits(dc.units.fp.precision(5));
 
-          var METChart     = make_barchart("#hist6", [0,200], "MET [GeV]", METDimension, METGroup)
+          var METChart     = make_barchart("#hist6", [0,200], "MET", METDimension, METGroup)
           METChart.xUnits(dc.units.fp.precision(10));
 
-          var DeltaPhiMETLLChart    = make_barchart("#hist7", [0, 180],"DeltaPhi(MET,ll) [deg]" ,DeltaPhiMETLLDimension, DeltaPhiMETLLGroup)
+          var DeltaPhiMETLLChart    = make_barchart("#hist7", [0, 180],"DeltaPhi(MET,ll)" ,DeltaPhiMETLLDimension, DeltaPhiMETLLGroup)
           DeltaPhiMETLLChart.xUnits(dc.units.fp.precision(10));
 
-          var deltaphiChart = make_barchart("#hist8", [0,180], "DeltaPhi(l,l) [deg]", DeltaPhiDimension, DeltaPhiGroup)
+          var deltaphiChart = make_barchart("#hist8", [0,180], "DeltaPhi(l,l)", DeltaPhiDimension, DeltaPhiGroup)
           deltaphiChart.xUnits(dc.units.fp.precision(10));
 
-          var sumlepptChart = make_barchart("#hist5", [0,200], "PT(ll) [GeV]", SumLepPtDimension, SumLepPtGroup)
+          var sumlepptChart = make_barchart("#hist5", [0,200], "PT(ll)", SumLepPtDimension, SumLepPtGroup)
           sumlepptChart.xUnits(dc.units.fp.precision(10));
 
           var BTagChart = make_barchart("#hist4", [0,3], "BTag", BTagDimension, BTagGroup)
@@ -199,7 +198,7 @@
                      .group(compGroup)
                      .label(function(d) {
                             val = type(d.key) + " (" + d.value.toFixed(0) + ")"
-                            return (d.key != 1) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
+                            return (d.key != 0) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
                      })
           
                      .elasticX(true)

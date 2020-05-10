@@ -24,35 +24,20 @@
   <body>
     <div style="width:1050px">
 <table style="width:100%">
-  <tr style="height: 50px">
-    <td valign="bottom">Transverse Mass [GeV]</td>
-    <td valign="bottom">Reconstructed Dilepton Mass [GeV]</td>
-    <td valign="bottom">Number of Jets</td>
-  </tr>
   <tr>
     <td><div id="hist1" title="Transverse Mass:  transverse mass is analogous to invariant mass but neglects the longitudinal momenta of the decay products."></div></td>
     <td><div id="hist2" title="Reconstructed Dilepton Mass (M(ll)): the mass reconstructed from the two leptons in the final state."></div></td>
     <td><div id="hist3" title="Number of Jets (N(Jets)): number of jets in the event."></div></td>
-  </tr>
-  <tr style="height: 50px">
-    <td valign="bottom">Are Jets b-tagged?</td>
-    <td valign="bottom">Total Lepton Transverse Momentum [GeV]</td>
-    <td valign="bottom">Missing Transverse Momentum (MET) [GeV]</td>
   </tr>
   <tr>
     <td><div id="hist4" title="Are Jets b-tagged? (BTag) : jets originating from b-quarks are identified and labelled, or tagged, using so-called b-tagging algorithms."></div></td>
     <td><div id="hist5" title="Total Lepton Transverse Momentum (PT(ll)): this is the vectorial sum of the transverse momenta of the observed charged leptons."></div></td>
     <td><div id="hist6" title="Missing Transverse Momentum (MET) : MET is used to infer the presence of non-detectable particles such as the neutrino."></div></td>
   </tr>
-  <tr style="height: 50px">
-    <td valign="bottom">Opening Angle Between MET and Leptons [phi]</td>
-    <td valign="bottom">Opening Angle Between Leptons [phi]</td>
-    <td valign="bottom">Expected Number of Events for 10/fb</td>
-  </tr>
   <tr>
     <td><div id="hist7" title="Opening Angle Between MET and Leptons (DeltaPhi(MET,ll)): This is the opening angle, measured in phi (&phi;), between the missing transverse momentum (MET) and the two leptons."></div></td>
     <td><div id="hist8" title="Opening Angle Between Leptons (DeltaPhi(l,l)): this is the angle, measured in phi (&phi;), between the two leptons. The azimuthal angle &phi; is measured from the x-axis, around the beam."></div></td>
-    <td><div id="hist9" title="Expected Number of Events for 10/fb: the number of events expected to be detected, reconstructed and recorded by ATLAS for 10 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
+    <td><div id="hist9" title="Number of Expected Events: the number of events expected to be detected, reconstructed and recorded by ATLAS for 1 inverse femtobarn of data.  Numbers taken from simulation. The significance of the H &rarr; WW events quantifies how 'significant' the Higgs sample is with respect to the background. (Number of H &rarr; WW events)/Number of background events. The larger the significance value is, the better job you have done extracting the Higgs signal."></div></td>
  </table>
 </div>
 
@@ -61,7 +46,7 @@
     <script charset="utf-8" type="text/javascript" src="dc.js"></script>
     <script charset="utf-8" type="text/javascript">
 
-      d3.csv("13TeV_TransData.csv", function(error, events) {
+      d3.csv("TransData.csv", function(error, events) {
 
           events.forEach(function(x) {
              x.weight = +x.weight;
@@ -82,7 +67,7 @@
              return [0,0,0,0,0];
           }
           
-          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318","#9F58C2"]);
+          var colorScale = d3.scale.ordinal().range(["#1C5EA8","#F66A00","#2A9000","#C31318"]);
           var ndx                       = crossfilter(events),
               njetDimension             = ndx.dimension(function(d) {return +d.NJets;}),
               typeDimension             = ndx.dimension(function(d) {return +d.type;}),
@@ -91,6 +76,7 @@
               SumLepPtDimension         = ndx.dimension(function(d) {return +Math.floor(d.SumLepPt*0.1)*10;}),
               ZWindowDimension          = ndx.dimension(function(d) {return +Math.floor(d.Mll*0.2)*5;}),
               TransMassDimension        = ndx.dimension(function(d) {return +Math.floor(d.TransMass*0.1)*10;}),
+              ChannelDimension          = ndx.dimension(function(d) {return +d.Channel;}),
               DeltaPhiDimension         = ndx.dimension(function(d) {return +Math.floor(d.LepDeltaPhi*0.31813*18)*10;})
               BTagDimension             = ndx.dimension(function(d) {return +d.BTags})
               NJetGroup                 = njetDimension.group().reduce(add_by_channel,remove_by_channel, initial),
@@ -101,16 +87,17 @@
               BTagGroup                 = BTagDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               compGroup                 = typeDimension.group().reduceSum(function(d) {return +d.weight;}),
               mcstatGroup               = typeDimension.group().reduceCount(),
+              ChannelGroup              = ChannelDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               METGroup                  = METDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               DeltaPhiGroup             = DeltaPhiDimension.group().reduce(add_by_channel,remove_by_channel, initial),
               SignificanceGroup         = typeDimension.groupAll().reduce(
                   function (p, v) {
-                      if (v.type == 1) p.sig += v.weight;
+                      if (v.type == 0) p.sig += v.weight;
                       else p.bkg += v.weight;
                       return p;
                   },
                   function (p, v) {
-                      if (v.type == 1) p.sig -= v.weight;
+                      if (v.type == 0) p.sig -= v.weight;
                       else p.bkg -= v.weight;
                       return p;
                   },
@@ -124,12 +111,11 @@
            }
           
            function type(i){
-              if (i == "1") return "H \u2192 WW";
-              if (i == "2") return "WW";
-              if (i == "3") return "ttbar";
-              if (i == "4") return "Z";
-	      if (i == "5") return "Other";
-              if (i == "0") return "data";
+              if (i == "0") return "H \u2192 WW";
+              if (i == "1") return "WW";
+              if (i == "2") return "ttbar";
+              if (i == "3") return "Z";
+              if (i == "4") return "data";
               return "default"
            }
           
@@ -147,11 +133,10 @@
                   .yAxisPadding("20%")
                   .clipPadding(10)
                   .dimension(dimension)
-                  .group(group, "H \u2192 WW", sel_stack('1'))
-                  .stack(group, "WW",          sel_stack('2'))
-                  .stack(group, "ttbar",       sel_stack('3'))
-                  .stack(group, "Z",           sel_stack('4'))
-		  .stack(group, "Other",       sel_stack('5'))
+                  .group(group, "HWW",   sel_stack('0'))
+                  .stack(group, "WW",    sel_stack('1'))
+                  .stack(group, "ttbar", sel_stack('2'))
+                  .stack(group, "Z",     sel_stack('3'))
                .on('renderlet', function(chart) {
                  chart.selectAll('.x-axis-label').attr('transform', 'translate(345,238)').attr('text-anchor', 'end');
                  chart.selectAll('.y-axis-label').attr('transform', 'rotate(-90), translate(-30,12)');
@@ -172,8 +157,8 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5;},
-                     y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0])); },
-                     y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0])); }
+                     y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4])); },
+                     y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4])); }
                    });
                  bar.append('line')
                    .attr({
@@ -182,8 +167,8 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5 - endwid;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5 + endwid; },
-                     y1: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));},
-                     y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));}
+                     y1: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));},
+                     y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));}
                    });
                  bar.append('line')
                    .attr({
@@ -192,14 +177,14 @@
                      stroke: 'black',
                      x1: function(d) { return chart.x()(d.key)+barWidth*0.5 - endwid;},
                      x2: function(d) { return chart.x()(d.key)+barWidth*0.5 + endwid;},
-                     y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));},
-                     y2: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));}
+                     y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));},
+                     y2: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));}
                    });
                  bar.append('circle')
                    .attr({
                      stroke: 'black',
                      cx: function(d) { return chart.x()(d.key)+barWidth*0.5;},
-                     cy: function(d) { return chart.y()(d.value[0]);},
+                     cy: function(d) { return chart.y()(d.value[4]);},
                      r: function(d)  { return 2;}
                    });
                })
@@ -213,21 +198,21 @@
                                .transition()
                                .duration(750)
                      
-                     bar.select('circle').attr({cy: function(d) { return chart.y()(d.value[0]);}});
+                     bar.select('circle').attr({cy: function(d) { return chart.y()(d.value[4]);}});
                      bar.select('line.errorwidth')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0])); },
-                         y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0])); }
+                         y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4])); },
+                         y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4])); }
                        });
                      bar.select('line.lowererror')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));},
-                         y2: function(d) { return chart.y()(d.value[0] - Math.sqrt(d.value[0]));}
+                         y1: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));},
+                         y2: function(d) { return chart.y()(d.value[4] - Math.sqrt(d.value[4]));}
                        });
                      bar.select('line.uppererror')
                        .attr({
-                         y1: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));},
-                         y2: function(d) { return chart.y()(d.value[0] + Math.sqrt(d.value[0]));}
+                         y1: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));},
+                         y2: function(d) { return chart.y()(d.value[4] + Math.sqrt(d.value[4]));}
                        });
                    })
              return chart
@@ -265,7 +250,7 @@
               return {
                   all:function () {
                       return source_group.all().filter(function(d) {
-                          return d.key != 0;
+                          return d.key != 4;
                       });
                   }
               };
@@ -280,13 +265,10 @@
                      .group(remove_data(compGroup))
                      .label(function(d) {
                             val = type(d.key) + " (" + d.value.toFixed(0) + ")"
-                            return (d.key != 1) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
+                            return (d.key != 0) ? val : val + "    Significance: " + significance(SignificanceGroup.value()).toFixed(3)
                      })
                      .elasticX(true)
-                     .colors(colorScale)
-		     .on('renderlet', function (chart) {
-                         chart.selectAll('g.axis text').attr('transform', 'translate(-10,10) rotate(315)');
-                     });                 
+                     .colors(colorScale)                 
          
          
          
@@ -308,11 +290,10 @@
               .text(displayText);
       }
 
-      /*AddXAxis(mcCompChart, "Expected Number of Events for 10/fb");*/      
+      AddXAxis(mcCompChart, "Number of Expected Events");      
       });
 
     </script>
 
   </body>
 </html>
-
